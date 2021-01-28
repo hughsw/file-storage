@@ -1,15 +1,41 @@
 import { Transform } from 'stream';
 import { createHash } from 'crypto';
 
+import { HashConfig, defaultHashConfig } from './types';
+
 // Gather size and content-addressable store key from a stream, and also a measure of throughput
 // Result is in getter state
 export class AddressTransform extends Transform {
+//  private readonly hashType = 'sha256';
+//    private readonly hashType = 'sha1';
+//  private readonly hashDigest = 'hex';
+
   private contentAddress: string;
   protected sizeBytes = 0;
   private uploadBytesPerSecond: number;
 
-  private hash = createHash('sha256');
+    //  private hash = createHash(this.hashType);
+    private readonly hash;
   private start = Date.now();
+
+  private randomError = false;
+
+    private hashConfig = defaultHashConfig();
+
+  constructor(options:{[key:string]: any;}|void = undefined) {
+      super();
+      if (options) {
+	  if (options.hashConfig) {
+	      this.hashConfig = {
+		  ...this.hashConfig,
+		  ...options.hashConfig,
+	      };
+	  }
+	  this.randomError = options.randomError;
+      }
+
+      this.hash = createHash(this.hashConfig.hashType);
+  }
 
   // The state can be accessed any time to get sizeBytes and uploadBytesPerSecond.  contentAddress
   // only appears after the stream is flushed (AddressTransform.end(), _flush()), at which
@@ -51,9 +77,9 @@ export class AddressTransform extends Transform {
     }
     finally {
       //console.log('AddressTransform _transform callback');
-      let x;
-      if (!error && (x = Math.random()) > 0.98) {
-	  error = new Error(`x: ${x}`);
+      let sample;
+      if (this.randomError && !error && (sample = Math.random()) > 0.99) {
+	  error = new Error(`transform error: ${sample}`);
       }
       callback(error);
     }
@@ -63,16 +89,16 @@ export class AddressTransform extends Transform {
     console.log('AddressTransform _flush');
     let error;
     try {
-      this.contentAddress = this.hash.digest('hex');
+      this.contentAddress = this.hash.digest(this.hashConfig.hashDigest);
       this.updateThroughput();
     }
     catch (err) {
       error = err;
     }
     finally {
-      let y;
-      if (!error && (y = Math.random()) > 0.9) {
-	  error = new Error(`y: ${y}`);
+      let sample;
+      if (this.randomError && !error && (sample = Math.random()) > 0.9) {
+	  error = new Error(`flush error: ${sample}`);
       }
       callback(error);
     }

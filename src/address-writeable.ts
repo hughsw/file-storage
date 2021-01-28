@@ -1,9 +1,13 @@
 import { createWriteStream, promises as fsPromises } from 'fs';
+import { createHash } from 'crypto';
 
 import { AddressTransform } from './address-transform';
 import { defer, errorObject } from './utils';
 import { FILE_MODE } from './constants';
 
+import { HashConfig, defaultHashConfig } from './types';
+
+console.log(defaultHashConfig());
 
 // Clients should only use the Writable interface.
 // 'close' and 'error' are the interesting events to monitor
@@ -19,12 +23,21 @@ export class AddressWritable  {
     private addressTransform: AddressTransform;
   private writeStream: NodeJS.WritableStream;
 
-  private readonly errors: Array<Error> = [];
+  private readonly errors: Array<any> = [];
+
+    private hashConfig = defaultHashConfig();
+    //private readonly hashType = 'sha256';
+//    private readonly hashType = 'sha1';
+//  private readonly hashDigest = 'hex';
 
   constructor(private inStream:NodeJS.ReadableStream, private readonly filename: string, private readonly clientTag:string|void=undefined) {
       //super();
 
-      this.addressTransform = new AddressTransform();
+      this.addressTransform = new AddressTransform({
+	  hashConfig: this.hashConfig,
+	  randomError: undefined,
+      });
+      //this.addressTransform = new AddressTransform({randomError:true});
 
     //const writeStream = createWriteStream(this.filename, { mode: FILE_MODE });
     this.writeStream = createWriteStream(this.filename, { mode: FILE_MODE });
@@ -93,6 +106,7 @@ export class AddressWritable  {
       //*
         this.writeStream.on('close', async () => {
             try {
+		// quick consistency check
 		const { size } = await fsPromises.stat(this.filename);
 		//console.log('AddressWritable.writeStream close sizes:', size, this.size);
 		if (size !== this.size)
@@ -207,6 +221,30 @@ export class AddressWritable  {
       }
       return state;
   }
+
+    // resolve to state on success, reject with error on failure
+    validate() {
+	const { promise, resolve, reject } = defer();
+
+	const validate = createReadStream(this.filename);
+	validate.on('error', reject);
+
+	const hash = createHash(this.hashConfig.hashType);
+	validate.on('data', chunk => hash.update(chunk));
+	validate.on('close', () => {
+	    const state = this.state;
+	    const address = (Math.random() > 0.5 ? 'XXX_' : '') + hash.digest(this.hashConfig.hashDigest);
+	    if (address === state.contentAddress) {
+		resolve(state);
+	    }
+	    else {
+		this.addError('validate error', new Error(`expected file '${this.filename}' to have address ${this.state.contentAddress}, but validator calculated ${address}`));
+		reject(this.state);
+	    }
+	});
+
+	return promise;
+    }
 
   protected addError(tag, error: Error) {
     console.log('AddressWritable error:', tag, this.errors.length, this.clientTag, ':', error);

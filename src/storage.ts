@@ -7,6 +7,10 @@ import { AddressWritable } from './address-writeable';
 import { hrHrTimestamp, defer, rangeMap, errorObject } from './utils';
 import { DIR_MODE } from './constants';
 
+
+import { HashConfig, defaultHashConfig } from './types';
+
+
 const { access, mkdir, chmod, rename, unlink } = fsPromises;
 
 const mkdirs = directory => mkdir(directory, { recursive: true, mode: DIR_MODE })
@@ -22,6 +26,8 @@ const mkdirs = directory => mkdir(directory, { recursive: true, mode: DIR_MODE }
 export class Storage {
   private incomingDirname: string;
   private casRootDirname: string;
+
+    private hashConfig = defaultHashConfig();
 
   constructor(private options:{[key:string]: any;}) {
     // async and constructors don't mix easily, so we use sync for these (infrequent) checks
@@ -39,7 +45,7 @@ export class Storage {
     const tempName = hrHrTimestamp() + (tag ? ('__' + tag) : '');
     const addressWritable = new AddressWritable(readable, join(this.incomingDirname, tempName), tag);
 
-    return addressWritable.runPipeline();
+    return addressWritable.runPipeline().then(() => addressWritable.validate());
   }
 
 
@@ -80,10 +86,10 @@ export class Storage {
 */
 
   private get casWidth():number {
-    return 2;
+    return this.hashConfig.casWidth;
   }
   private get casDepth():number {
-    return 2;
+    return this.hashConfig.casDepth;
   }
 
   private contentCasDir(contentAddress:string):string {
