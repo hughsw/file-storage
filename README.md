@@ -1,5 +1,6 @@
+# Content Addressable File Storage (CAFS)
 
-# Processing chain
+## Processing chain
 
 At top-level you have
 * an input stream of bytes to be stored
@@ -27,7 +28,7 @@ You don't want
 
 An error can happen at any stage, but primarily involving file store
 
-## Upload
+### Upload
 
 Configuration:
 * temporary location
@@ -45,7 +46,7 @@ Processing:
 * maybe validate content
 * result is payload with filename, content-address, size, etc
 
-## CAFS - move to content-addressable file store
+### CAFS - move to content-addressable file store
 
 Configuration:
 * permanent location
@@ -61,4 +62,4 @@ Processing:
 * maybe validate content
 * result is payload with content-address, size, isDuplicate, artifacts
 
-## CAFS - move to content-addressable file store
+### CAFS - move to content-addressable file store
