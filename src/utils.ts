@@ -114,3 +114,24 @@ export function* range(start:number, stop:number|undefined=undefined) {
 //console.log(Array.from(range(15,20)));
 //export rangeMap = (start:number, stop:number|void=undefined) => Array.from(range(start.stop)).map
 export const rangeMap = (stop:number, func) => Array.from(range(0, stop)).map(func);
+
+
+// Normalize error-like things to plain Object to be thrown
+//
+// This is needed based on empirical evidence that Error objects do
+// not play well with promises that have involved system calls that
+// create errors.  Our guess being that the call stacks may not
+// survive the promise/catch handling...
+export const errorObject = error => {
+    const json = JSON.stringify(error);
+    if (json !== '{}') {
+	const obj = JSON.parse(json);
+	obj.message = error.message;
+	return obj;
+    }
+    else {
+	return {
+	    message: `${error}`,
+	};
+    }
+};

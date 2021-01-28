@@ -4,15 +4,18 @@ import { basename, join } from 'path';
 import { AddressWritable } from './address-writeable';
 //const { access } = fsPromises;
 //import { defer } from './defer';
-import { hrHrTimestamp, defer, rangeMap } from './utils';
+import { hrHrTimestamp, defer, rangeMap, errorObject } from './utils';
 import { DIR_MODE } from './constants';
 
 const { access, mkdir, chmod, rename, unlink } = fsPromises;
 
-
 const mkdirs = directory => mkdir(directory, { recursive: true, mode: DIR_MODE })
       .catch(error => {
-        throw new Error(`unable to create directory '${directory}' : ${error.message}`);
+	  console.log('mkdir error json:', JSON.stringify(error));
+	  console.log('mkdir error message:', error.message);
+	  console.log('mkdir error template:', `${error}`);
+	  throw errorObject(error);
+          //throw new Error(`unable to create directory '${directory}' : ${error.message}`);
       });
 
 
@@ -111,8 +114,9 @@ export class Storage {
 */
 
   private async move(incame) {
+      const { filename, contentAddress, sizeBytes, uploadBytesPerSecond, tag } = incame;
+
     try {
-      const { filename, contentAddress, sizeBytes, tag } = incame;
 
       // early sanity check
       await access(filename, fsConstants.R_OK);
@@ -172,18 +176,34 @@ export class Storage {
         }
       }
 
-      return { isDuplicate, contentAddress, sizeBytes, tag, contentCasPath };
+	return {
+	    tag,
+	    sizeBytes,
+	    contentAddress,
+	    contentCasPath,
+	    isDuplicate,
+	    uploadBytesPerSecond,
+	};
     }
     catch (error) {
-      throw new Error(`Storage move error: ${error}`);
+	console.log(`move caught error: ${tag} : ${error}`);
+	throw errorObject(error);
+	//throw new Error(`Storage move error: ${error}`);
     }
   }
 
-  async storeStream(readable:NodeJS.ReadableStream, tag:string|void = undefined) {
-    const incame = await this.incomingStream(readable, tag);
+    async storeStream(readable:NodeJS.ReadableStream, tag:string|void = undefined) {
+	try {
+	    const incame = await this.incomingStream(readable, tag);
+	    const result = await this.move(incame);
 
-    return this.move(incame);
-  }
+	    return result;
+	}
+	catch (error) {
+	console.log(`storeStream caught error: ${tag} : ${error}`);
+	    throw error;
+	}
+    }
 
 }
 
@@ -195,10 +215,12 @@ if (require.main === module) {
     console.log('main(): args:', args);
 
     const options = {
-      incomingDirname: '/Volumes/NoSpaceLeftOnDevice/incoming',
-      casRootDirname: '/Volumes/NoSpaceLeftOnDevice/cas',
+	//incomingDirname: '/Volumes/NoSpaceLeftOnDevice/incoming',
+	//casRootDirname: '/Volumes/NoSpaceLeftOnDevice/cas',
       //incomingDirname: '/tmp/storage/incoming',
       //casRootDirname: '/tmp/storage/cas',
+      incomingDirname: '/home/hugh/work/file-storage/no-space-left-on-device/incoming',
+      casRootDirname: '/home/hugh/work/file-storage/no-space-left-on-device/cas',
     };
 
     const storage = new Storage(options);
@@ -212,23 +234,60 @@ if (require.main === module) {
 */
 
 
-    const work = Promise.allSettled(args.map(async filename => {
+      //const work = Promise.allSettled(args.map(async filename => {
+      const work = Promise.all(args.map(async filename => {      
+	    
       const inputStream = createReadStream(join(filename));
       try {
         const res = await storage.storeStream(inputStream, basename(filename));
         return res;
       }
       catch (error) {
-        console.log(`main work catch 1: ${filename}`);
+//        console.log(`main work catch 1: ${filename}`);
+        console.log(`main work catch 1: ${filename} : typeof(error) ${typeof error}`);
         console.log(`main work catch 2: ${filename} : ${error}`);
         console.log(`main work catch 3: ${filename} :`, JSON.stringify(error));
-        //return { mainError: new Error(`main work catch: ${filename}`) };
-        //throw new Error(`main work catch: ${filename}: ${error}`);
-        throw new Error('fooner error');
+	  const json = JSON.stringify(error);
+	  if (json === '{}') {
+              //return { mainError: new Error(`main work catch: ${filename}`) };
+              //throw new Error(`main work catch: ${filename}: ${error}`);
+	      throw {
+		  errors: [{
+		      location: `main work catch: ${filename}`,
+		      message: `${error}`,
+		  }],
+	      };
+	  } else {
+	      //throw new Error(`main work catch: ${filename}: ${json}`);
+	      throw JSON.parse(json);
+	  }
+          //throw new Error('fooner error');
         //throw new Error(`main work catch: ${filename}`);
         //throw new Error(`main catch: ${error}`);;
       }
-    }));
+// see: https://dev.to/vitalets/what-s-wrong-with-promise-allsettled-and-promise-any-5e6o
+      }).map(p => p.catch(e => {
+	  return e;
+	  return `${e}`;
+
+	  const res = {e};
+	  console.log(`promise all shim 1: ${e}`);
+	  console.log(`promise all shim 2: ${JSON.stringify(res)}`);
+	  console.log(`promise all shim 3: ${res}`);
+	  try {
+	      //throw new Error(e);
+	      throw new Error(`${e}`);
+	  }
+	  catch (error) {
+	      const res2 = { e2: error };
+
+	      console.log(`promise all shim 4: ${error}`);
+	      console.log(`promise all shim 5: ${JSON.stringify(res2)}`);
+	      console.log(`promise all shim 6: ${res2}`);
+	      return { e3: `promise all shim 5: ${error}` };
+	  }
+	  //return res;
+      })));
     return work;
   };
 
@@ -238,10 +297,12 @@ if (require.main === module) {
     const { promise, resolve, reject } = defer();
 
     const options = {
-      incomingDirname: '/Volumes/NoSpaceLeftOnDevice/incoming',
-      casRootDirname: '/Volumes/NoSpaceLeftOnDevice/cas',
+	//incomingDirname: '/Volumes/NoSpaceLeftOnDevice/incoming',
+	//casRootDirname: '/Volumes/NoSpaceLeftOnDevice/cas',
       //incomingDirname: '/tmp/storage/incoming',
       //casRootDirname: '/tmp/storage/cas',
+      incomingDirname: '/home/hugh/work/file-storage/no-space-left-on-device/incoming',
+      casRootDirname: '/home/hugh/work/file-storage/no-space-left-on-device/cas',
     };
 
 

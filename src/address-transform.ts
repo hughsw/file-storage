@@ -6,19 +6,19 @@ import { createHash } from 'crypto';
 export class AddressTransform extends Transform {
   private contentAddress: string;
   protected sizeBytes = 0;
-  private bytesPerSecond: number;
+  private uploadBytesPerSecond: number;
 
   private hash = createHash('sha256');
   private start = Date.now();
 
-  // The state can be accessed any time to get sizeBytes and bytesPerSecond.  contentAddress
+  // The state can be accessed any time to get sizeBytes and uploadBytesPerSecond.  contentAddress
   // only appears after the stream is flushed (AddressTransform.end(), _flush()), at which
   // point the state will never change.
   get state() {
     const state:{[key:string]: any;} = {
       contentAddress: this.contentAddress,
       sizeBytes: this.sizeBytes,
-      bytesPerSecond: this.bytesPerSecond,
+      uploadBytesPerSecond: this.uploadBytesPerSecond,
     };
     return state;
   }
@@ -27,9 +27,9 @@ export class AddressTransform extends Transform {
     //  avoid possible divide-by-zero
     const msec = (Date.now() - this.start) || 1;
     const recipDurationSec = 1000 / msec;
-    this.bytesPerSecond = Math.floor(this.sizeBytes * recipDurationSec);
+    this.uploadBytesPerSecond = Math.floor(this.sizeBytes * recipDurationSec);
     //const durationSec = (Date.now() - this.start + 1) / 1000;
-    //this.bytesPerSecond = Math.floor(this.sizeBytes / durationSec);
+    //this.uploadBytesPerSecond = Math.floor(this.sizeBytes / durationSec);
   }
 
   _transform(chunk, encoding, callback) {
@@ -51,6 +51,10 @@ export class AddressTransform extends Transform {
     }
     finally {
       //console.log('AddressTransform _transform callback');
+      let x;
+      if (!error && (x = Math.random()) > 0.98) {
+	  error = new Error(`x: ${x}`);
+      }
       callback(error);
     }
   };
@@ -66,6 +70,10 @@ export class AddressTransform extends Transform {
       error = err;
     }
     finally {
+      let y;
+      if (!error && (y = Math.random()) > 0.9) {
+	  error = new Error(`y: ${y}`);
+      }
       callback(error);
     }
   };

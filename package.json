@@ -8,10 +8,6 @@
   },
   "author": "Hugh Secker-Walker",
   "license": "Apache-2.0",
-  "dependencies": {
-    "sqlite": "4.0.19",
-    "sqlite3": "5.0.1"
-  },
   "devDependencies": {
     "@types/node": "14.14.22",
     "ts-node": "9.1.1",

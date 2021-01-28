@@ -1,6 +1,7 @@
 import { createWriteStream, promises as fsPromises } from 'fs';
 
 import { AddressTransform } from './address-transform';
+import { defer, errorObject } from './utils';
 import { FILE_MODE } from './constants';
 
 
@@ -11,13 +12,19 @@ import { FILE_MODE } from './constants';
 // - valid content-addressable properties and no .errors
 // or
 // - a .errors array and incomplete content-addressable properties
-export class AddressWritable extends AddressTransform {
+//export class AddressWritable extends AddressTransform {
+export class AddressWritable  {
+
+    //  private addressTransform: NodeJS.ReadableStream & NodeJS.WritableStream;;
+    private addressTransform: AddressTransform;
+  private writeStream: NodeJS.WritableStream;
 
   private readonly errors: Array<Error> = [];
-  private writeStream:NodeJS.WritableStream;
 
   constructor(private inStream:NodeJS.ReadableStream, private readonly filename: string, private readonly clientTag:string|void=undefined) {
-    super();
+      //super();
+
+      this.addressTransform = new AddressTransform();
 
     //const writeStream = createWriteStream(this.filename, { mode: FILE_MODE });
     this.writeStream = createWriteStream(this.filename, { mode: FILE_MODE });
@@ -43,7 +50,7 @@ export class AddressWritable extends AddressTransform {
     // Through a lengthy bitter experience we have learned that the Stream APIs are not
     // reliable following an error.  Using them after an error is risky.  In particular, Node
     // JS sometimes crashes after a 'No space left on device' error if you continue to work
-    // with the stream.  So, we reject immediately.
+    // with the stream.  So, we resolve immediately with an error condition.
 
     try {
       //this.inStream.on('error', error => console.log('AddressWritable inStream error:', error));
@@ -56,12 +63,20 @@ export class AddressWritable extends AddressTransform {
       this.inStream.on('close', () => console.log('AddressWritable.inStream close', this.clientTag));
 
 
+      this.addressTransform.on('error', error => {
+        //return reject(error);
+        this.addError('AddressWritable on error', error);
+        myReject();
+      });
+      this.addressTransform.on('close', () => console.log('AddressWritable close', this.clientTag));
+	/*
       this.on('error', error => {
         //return reject(error);
         this.addError('AddressWritable on error', error);
         myReject();
       });
       this.on('close', () => console.log('AddressWritable close', this.clientTag));
+*/
 
       this.writeStream.on('error', error => {
         this.addError('writeStream on error', error);
@@ -73,33 +88,44 @@ export class AddressWritable extends AddressTransform {
 
       this.writeStream.on('close', () => console.log('AddressWritable.writeStream close', this.clientTag));
       //this.writeStream.on('close', () => (this.errors.length === 0 ? resolve(this.state) : myReject()));
-      this.writeStream.on('close', () => (this.errors.length === 0 ? myResolve() : myReject()));
+	//this.writeStream.on('close', () => (this.errors.length === 0 ? myResolve() : myReject()));
 
-      /*
+      //*
         this.writeStream.on('close', async () => {
-        try {
-        const { size } = await fsPromises.stat(this.filename);
-        if (size !== this.size)
-        console.log('AddressWritable.writeStream close sizes:', size, this.size);
-        //throw new Error(`expected written file '${this.filename}' to be ${this.size} bytes, stat gives ${size}`);
-        }
-        catch (error) {
-        this.addError('writeStream on close', error);
-        }
-        finally {
-        console.log('AddressWritable on close finally', this.clientTag);
-        (this.errors.length === 0 ? resolve : reject)(this.state);
-        }
+            try {
+		const { size } = await fsPromises.stat(this.filename);
+		//console.log('AddressWritable.writeStream close sizes:', size, this.size);
+		if (size !== this.size)
+		    throw new Error(`expected written file '${this.filename}' to be ${this.size} bytes, stat gives ${size}`);
+            }
+            catch (error) {
+		this.addError('writeStream on close', error);
+            }
+            finally {
+		console.log('AddressWritable on close finally', this.clientTag);
+		this.errors.length === 0
+		    ? myResolve()
+		    : myReject();
+		//(this.errors.length === 0 ? resolve : reject)(this.state);
+            }
         });
-      */
+	//HSW*/
 
-      console.log('AddressWriteable.pipe(this.writeStream)');
-      this.pipe(this.writeStream);
+      // We handle use of the Readable interface
+      console.log('AddressWriteable.inStream.pipe(AddressWritable.addressTransform)');
+      this.inStream.pipe(this.addressTransform);
+
+      console.log('AddressWriteable.addressTransform.pipe(AddressWritable.writeStream)');
+      this.addressTransform.pipe(this.writeStream);
+/*
 
       // We handle use of the Readable interface
       console.log('AddressWriteable.inStream.pipe(this)');
       this.inStream.pipe(this);
 
+      console.log('AddressWriteable.pipe(this.writeStream)');
+      this.pipe(this.writeStream);
+*/
     }
     catch (error) {
       this.addError('AddressWriteable go catch', error);
@@ -110,7 +136,7 @@ export class AddressWritable extends AddressTransform {
       return promise;
     }
 
-    return promise;
+      //return promise;
   }
 
   /*
@@ -160,23 +186,26 @@ export class AddressWritable extends AddressTransform {
   */
 
   protected get size() {
-    return super.state.sizeBytes;
+      //return super.state.sizeBytes;
+      return this.addressTransform.state.sizeBytes;
   }
 
   get state() {
-    const state:{[key:string]: any;} = {
-      ...super.state,
-      filename: this.filename,
-      tag: this.clientTag,
-    };
-    if (this.errors.length > 0) {
-      console.log('AddressWritable get state(), before error-based deletes:', JSON.stringify(state));
-      // these are likely bogus
-      delete state.sizeBytes;
-      delete state.contentAddress;
-      state.errors = [...this.errors];
-    }
-    return state;
+      const state:{[key:string]: any;} = {
+	  //	  ...super.state,
+	  tag: this.clientTag,
+	  ...this.addressTransform.state,
+	  filename: this.filename,
+      };
+      if (this.errors.length > 0) {
+	  console.log('AddressWritable get state(), before error-based deletes:', JSON.stringify(state));
+	  // these are likely bogus
+	  //delete state.sizeBytes;
+	  delete state.contentAddress;
+	  state.error = true;
+	  state.errors = [...this.errors];
+      }
+      return state;
   }
 
   protected addError(tag, error: Error) {
@@ -190,7 +219,8 @@ export class AddressWritable extends AddressTransform {
     }
     // collect all errors for get state()
     // e.g. "no space left on device" error also causes the check in 'close' to fail...
-    this.errors.push(error);
+      this.errors.push(errorObject(error));
+      //this.errors.push(error);
   }
 
 }
@@ -199,7 +229,7 @@ export class AddressWritable extends AddressTransform {
 import { createReadStream } from 'fs';
 import { join } from 'path';
 
-import { defer } from './defer';
+//import { defer } from './defer';
 
 // console.log('require.main:', require.main);
 // console.log('module:', module);
@@ -215,6 +245,7 @@ if (require.main === module) {
       const aw = new AddressWritable(inputFile, '/tmp/foonerxxyy');
       //const aw = new AddressWritable('/Volumes/NoSpaceLeftOnDevice/fooneration');
 
+/*
       aw.on('error', error => console.error('aw on error:', error));
       aw.on('finish', () => console.log('aw on finish'));
       //aw.on('drain', () => console.log('aw on drain'));
@@ -225,6 +256,7 @@ if (require.main === module) {
         console.log('aw on close:', JSON.stringify(aw.state));
         resolve(aw.state);
       });
+*/
 
       //console.log('inputFile.pipe(aw)')
       //inputFile.pipe(aw);
