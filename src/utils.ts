@@ -118,22 +118,21 @@ export const rangeMap = (stop:number, func) => Array.from(range(0, stop)).map(fu
 
 // Normalize error-like things to plain Object to be thrown
 //
-// This is needed based on empirical evidence that Error objects do
-// not play well with promises that have involved system calls that
-// create errors.  Our guess being that the call stacks may not
-// survive the promise/catch handling...
+// This is needed based on empirical evidence that Error objects do not play well with promises
+// that have involved system calls that create errors.  Our guess being that the call stacks of
+// the system-call Error objects may not survive the promise/catch handling...
 export const errorObject = error => {
-    const json = JSON.stringify(error);
-    if (json !== '{}') {
-	const obj = JSON.parse(json);
-	obj.message = error.message;
-	return obj;
-    }
-    else {
-	return {
-	    message: `${error}`,
-	};
-    }
+  const json = JSON.stringify(error);
+  if (json !== '{}') {
+    const obj = JSON.parse(json);
+    obj.message = error.message;
+    return obj;
+  }
+  else {
+    return {
+      message: `${error}`,
+    };
+  }
 };
 
 export const randomError = (chance: number, tag: string = null) => {
@@ -144,11 +143,14 @@ export const randomThrow = (chance: number, tag: string = null) => {
     const error = randomError(chance, tag);
     if (error) throw error;
 };
-    
-    
+
+
 // unopinionated version of Promise.allSettled() that includes the rejections in the list
 // see: https://dev.to/vitalets/what-s-wrong-with-promise-allsettled-and-promise-any-5e6o
 //export const promiseAll = (args: Array<Promise<any>>): Promise<Array<any>> => Promise.all(args.map(arg => arg.catch(rejection => rejection)));
 //export const promiseAll = (args: Array<any>): Promise<Array<any>> => Promise.all(args.map(arg => arg.catch(rejection => rejection)));
+
 export const promiseAll = (args: Array<any>): Promise<Array<any>> => Promise.all(args.map(arg => (async arg1 => arg1)(arg).catch(rejection => rejection)));
+export const promiseAllJson = (args: Array<any>): Promise<Array<any>> => Promise.all(args.map(arg => (async arg1 => arg1)(arg).catch(errorObject)));
+
 promiseAll([null, undefined, true, 3, (async () => 4)(), Promise.resolve(5), Promise.reject(6)]).then(console.log).catch(console.error);

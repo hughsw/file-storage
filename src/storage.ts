@@ -4,7 +4,7 @@ import { basename, join } from 'path';
 import { AddressWritable } from './address-writeable';
 //const { access } = fsPromises;
 //import { defer } from './defer';
-import { hrHrTimestamp, defer, rangeMap, errorObject, randomThrow } from './utils';
+import { hrHrTimestamp, defer, rangeMap, errorObject, randomThrow, promiseAllJson } from './utils';
 import { DIR_MODE } from './constants';
 
 
@@ -227,11 +227,11 @@ import { createReadStream } from 'fs';
 if (require.main === module) {
 
   const main = (args) => {
-    console.log('main(): args:', args);
+    console.log('main(): args:', '\n' + args.join('\n'));
 
     const options = {
-	//incomingDirname: '/Volumes/NoSpaceLeftOnDevice/incoming',
-	//casRootDirname: '/Volumes/NoSpaceLeftOnDevice/cas',
+      //incomingDirname: '/Volumes/NoSpaceLeftOnDevice/incoming',
+      //casRootDirname: '/Volumes/NoSpaceLeftOnDevice/cas',
       //incomingDirname: '/tmp/storage/incoming',
       //casRootDirname: '/tmp/storage/cas',
       incomingDirname: '/home/hugh/work/file-storage/no-space-left-on-device/incoming',
@@ -240,145 +240,20 @@ if (require.main === module) {
 
     const storage = new Storage(options);
 
-    //const work = Promise.all(args.map(filename => {
-/*
-    const work = Promise.allSettled(args.map(async filename => {
-      const inputStream = createReadStream(join(filename));
-      return storage.storeStream(inputStream, basename(filename));
-    }));
-*/
+    const storeStream = filename => storage.storeStream(createReadStream(filename), basename(filename));
 
+    return promiseAllJson(args.map(storeStream));
 
-      //const work = Promise.allSettled(args.map(async filename => {
-      const work = Promise.all(args.map(async filename => {      
-	    
-      const inputStream = createReadStream(filename);
-      try {
-        const res = await storage.storeStream(inputStream, basename(filename));
-        return res;
-      }
-      catch (error) {
-//        console.log(`main work catch 1: ${filename}`);
-        console.log(`main work catch 1: ${filename} : typeof(error) ${typeof error}`);
-        console.log(`main work catch 2: ${filename} : ${error}`);
-        console.log(`main work catch 3: ${filename} :`, JSON.stringify(error));
-	  const json = JSON.stringify(error);
-	  if (json === '{}') {
-              //return { mainError: new Error(`main work catch: ${filename}`) };
-              //throw new Error(`main work catch: ${filename}: ${error}`);
-	      throw {
-		  error: true,
-		  errors: [{
-		      location: `main work catch: ${filename}`,
-		      message: `${error}`,
-		  }],
-	      };
-	  } else {
-	      //throw new Error(`main work catch: ${filename}: ${json}`);
-	      throw JSON.parse(json);
-	  }
-          //throw new Error('fooner error');
-        //throw new Error(`main work catch: ${filename}`);
-        //throw new Error(`main catch: ${error}`);;
-      }
-// see: https://dev.to/vitalets/what-s-wrong-with-promise-allsettled-and-promise-any-5e6o
-      }).map(p => p.catch(e => {
-	  return e;
-	  return `${e}`;
+//    const work = promiseAllJson(args.map(filename => storage.storeStream(createReadStream(filename), basename(filename))));
 
-	  const res = {e};
-	  console.log(`promise all shim 1: ${e}`);
-	  console.log(`promise all shim 2: ${JSON.stringify(res)}`);
-	  console.log(`promise all shim 3: ${res}`);
-	  try {
-	      //throw new Error(e);
-	      throw new Error(`${e}`);
-	  }
-	  catch (error) {
-	      const res2 = { e2: error };
-
-	      console.log(`promise all shim 4: ${error}`);
-	      console.log(`promise all shim 5: ${JSON.stringify(res2)}`);
-	      console.log(`promise all shim 6: ${res2}`);
-	      return { e3: `promise all shim 5: ${error}` };
-	  }
-	  //return res;
-      })));
-    return work;
-  };
-
-  const mainX = (args) => {
-    console.log('main(): args:', args);
-
-    const { promise, resolve, reject } = defer();
-
-    const options = {
-	//incomingDirname: '/Volumes/NoSpaceLeftOnDevice/incoming',
-	//casRootDirname: '/Volumes/NoSpaceLeftOnDevice/cas',
-      //incomingDirname: '/tmp/storage/incoming',
-      //casRootDirname: '/tmp/storage/cas',
-      incomingDirname: '/home/hugh/work/file-storage/no-space-left-on-device/incoming',
-      casRootDirname: '/home/hugh/work/file-storage/no-space-left-on-device/cas',
-    };
-
-
-    try {
-      const storage = new Storage(options);
-
-      //const work = Promise.all(args.map(filename => {
-      const work = Promise.allSettled(args.map(async filename => {
-        const inputStream = createReadStream(join(filename));
-        try {
-          const res = await storage.storeStream(inputStream, basename(filename));
-          return res;
-        }
-        catch (error) {
-          throw new Error(`main catch: ${filename}`);
-          //throw new Error(`main catch: ${error}`);;
-        }
-
-/*
-        const res = await storage.storeStream(inputStream, basename(filename)).catch(error => `fooner: ${error}`);
-        return {
-          filename,
-          res,
-        };
-*/
-      }));
-
-      resolve(work);
-/*
-      const inputFile = createReadStream(join(__dirname, 'index.ts'));
-      //const inputFile = createReadStream(join('/Users/hugh/Downloads', 'FAA-H-8083-16B_Chapter_4.pdf'));
-      const x = storage.storeStream(inputFile, 'test');
-
-      const y = (new Array(5)).fill(0).map(_ => {
-        const inputFile = createReadStream(join(__dirname, 'index.ts'));
-        //const inputFile = createReadStream(join('/Users/hugh/Downloads', 'FAA-H-8083-16B_Chapter_4.pdf'));
-        const x = storage.storeStream(inputFile, 'test');
-        return x;
-      });
-      y.push(x);
-
-      resolve(Promise.all(y));
-*/
-
-    }
-    catch (error) {
-      reject(`main error: ${error}`);
-      //reject(error);
-    }
-    finally {
-      return promise;
-    }
+//    return work;
   };
 
   main(process.argv.slice(2))
     .then(result => console.log('result:\n', JSON.stringify(result)))
     .then(() => setTimeout(() => console.log('setTimeout'), 700))
     .catch(error => {
-      console.log(error);
-      console.log('*** fail ***');
+      console.log('fail:', error, '\n*** fail ***');
       process.nextTick(() => process.exit(1));
     })
   ;
