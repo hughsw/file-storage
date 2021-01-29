@@ -4,7 +4,7 @@ import { basename, join } from 'path';
 import { AddressWritable } from './address-writeable';
 //const { access } = fsPromises;
 //import { defer } from './defer';
-import { hrHrTimestamp, defer, rangeMap, errorObject } from './utils';
+import { hrHrTimestamp, defer, rangeMap, errorObject, randomThrow } from './utils';
 import { DIR_MODE } from './constants';
 
 
@@ -38,6 +38,8 @@ export class Storage {
     this.casRootDirname = realpathSync(this.options.casRootDirname);
 
     console.log('this:', JSON.stringify(this));
+
+      randomThrow(0.05, 'Storage.constructor');
   }
 
 
@@ -98,6 +100,9 @@ export class Storage {
     const casDirs = rangeMap(this.casDepth, (i:number) => contentAddress.slice(i*this.casWidth, (i+1)*this.casWidth)) as Array<string>;
     //console.log('casDirs:', JSON.stringify(casDirs));
     const contentCasDir = join(...casDirs);
+
+      randomThrow(0.05, 'Storage.contentCasDir');
+
     return contentCasDir;
   }
 
@@ -125,6 +130,7 @@ export class Storage {
     try {
 
       // early sanity check
+	randomThrow(0.05, 'access(filename)');
       await access(filename, fsConstants.R_OK);
 
       const contentCasDir = this.contentCasDir(contentAddress);
@@ -140,6 +146,7 @@ export class Storage {
       //console.log('created:', created);
       if (!isDuplicate) {
         // create
+	  randomThrow(0.05, 'mkdirs');
         await mkdirs(join(this.casRootDirname, contentCasDir));
         //const path = await mkdirs(contentCasPath);
         //console.log('path:', JSON.stringify(path));
@@ -168,6 +175,7 @@ export class Storage {
             isDuplicate = true;
           }
           catch {
+	      randomThrow(0.05, 'renameSync');
             renameSync(filename, targetFilename);
           }
         }
@@ -176,6 +184,7 @@ export class Storage {
       }
 
       if (isDuplicate) {
+	  randomThrow(0.05, 'unlink');
         // leave 5% of duplicates lying around
         if (Date.now() % 100 + 1 >= 5) {
           await unlink(filename);
@@ -243,7 +252,7 @@ if (require.main === module) {
       //const work = Promise.allSettled(args.map(async filename => {
       const work = Promise.all(args.map(async filename => {      
 	    
-      const inputStream = createReadStream(join(filename));
+      const inputStream = createReadStream(filename);
       try {
         const res = await storage.storeStream(inputStream, basename(filename));
         return res;
@@ -258,6 +267,7 @@ if (require.main === module) {
               //return { mainError: new Error(`main work catch: ${filename}`) };
               //throw new Error(`main work catch: ${filename}: ${error}`);
 	      throw {
+		  error: true,
 		  errors: [{
 		      location: `main work catch: ${filename}`,
 		      message: `${error}`,

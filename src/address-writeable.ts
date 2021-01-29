@@ -2,7 +2,7 @@ import { createWriteStream, promises as fsPromises } from 'fs';
 import { createHash } from 'crypto';
 
 import { AddressTransform } from './address-transform';
-import { defer, errorObject } from './utils';
+import { defer, errorObject, randomError, randomThrow } from './utils';
 import { FILE_MODE } from './constants';
 
 import { HashConfig, defaultHashConfig } from './types';
@@ -30,17 +30,19 @@ export class AddressWritable  {
 //    private readonly hashType = 'sha1';
 //  private readonly hashDigest = 'hex';
 
-  constructor(private inStream:NodeJS.ReadableStream, private readonly filename: string, private readonly clientTag:string|void=undefined) {
+  constructor(private readonly inStream:NodeJS.ReadableStream, private readonly filename: string, private readonly clientTag:string|void=undefined) {
       //super();
 
       this.addressTransform = new AddressTransform({
 	  hashConfig: this.hashConfig,
-	  randomError: undefined,
+//	  randomError: undefined,
       });
       //this.addressTransform = new AddressTransform({randomError:true});
 
     //const writeStream = createWriteStream(this.filename, { mode: FILE_MODE });
     this.writeStream = createWriteStream(this.filename, { mode: FILE_MODE });
+
+      randomThrow(0.05, 'AddressWritable.constructor');
   }
 
   // Run the streams, returning a promise
@@ -109,7 +111,7 @@ export class AddressWritable  {
 		// quick consistency check
 		const { size } = await fsPromises.stat(this.filename);
 		//console.log('AddressWritable.writeStream close sizes:', size, this.size);
-		if (size !== this.size)
+		if (size !== this.size  + (randomError(0.05) ? 1 : 0) )
 		    throw new Error(`expected written file '${this.filename}' to be ${this.size} bytes, stat gives ${size}`);
             }
             catch (error) {
@@ -233,7 +235,8 @@ export class AddressWritable  {
 	validate.on('data', chunk => hash.update(chunk));
 	validate.on('close', () => {
 	    const state = this.state;
-	    const address = (Math.random() > 0.5 ? 'XXX_' : '') + hash.digest(this.hashConfig.hashDigest);
+	    //const address = (Math.random() < 0.1 ? 'XXX_' : '') + hash.digest(this.hashConfig.hashDigest);
+	    const address = (randomError(0.1) ? 'XXX_' : '') + hash.digest(this.hashConfig.hashDigest);
 	    if (address === state.contentAddress) {
 		resolve(state);
 	    }

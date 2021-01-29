@@ -135,3 +135,17 @@ export const errorObject = error => {
 	};
     }
 };
+
+export const randomError = (chance: number, tag: string = null) => {
+    if (Math.random() < chance) return new Error(tag || `randomError at ${chance}`);
+};
+
+export const randomThrow = (chance: number, tag: string = null) => {
+    const error = randomError(chance, tag);
+    if (error) throw error;
+};
+    
+    
+// unopinionated version of Promise.allSettled() that includes the rejections in the list
+// see: https://dev.to/vitalets/what-s-wrong-with-promise-allsettled-and-promise-any-5e6o
+export const promiseAll = (args: Array<Promise<any>>): Promise<Array<any>> => Promise.all(args.map(arg => arg.catch(rejection => rejection)));
