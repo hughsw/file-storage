@@ -135,14 +135,21 @@ export const errorObject = error => {
   }
 };
 
+/*
+export const randomError = undefined;
+export const randomThrow = undefined;
+//HSW*/
+
+//*
 export const randomError = (chance: number, tag: string = null) => {
     if (Math.random() < chance) return new Error(tag || `randomError at ${chance}`);
 };
 
-export const randomThrow = (chance: number, tag: string = null) => {
+export const randomThrow = (chance: number, tag: string = null):void => {
     const error = randomError(chance, tag);
     if (error) throw error;
 };
+//HSW*/
 
 
 // unopinionated version of Promise.allSettled() that includes the rejections in the list

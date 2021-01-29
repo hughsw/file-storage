@@ -27,7 +27,7 @@ export class Storage {
   private incomingDirname: string;
   private casRootDirname: string;
 
-    private hashConfig = defaultHashConfig();
+  private hashConfig = defaultHashConfig();
 
   constructor(private options:{[key:string]: any;}) {
     // async and constructors don't mix easily, so we use sync for these (infrequent) checks
@@ -39,15 +39,51 @@ export class Storage {
 
     console.log('this:', JSON.stringify(this));
 
-      randomThrow(0.05, 'Storage.constructor');
+    randomThrow && randomThrow(0.05, 'Storage.constructor');
   }
 
 
-  private incomingStream(readable:NodeJS.ReadableStream, tag:string|void) {
-    const tempName = hrHrTimestamp() + (tag ? ('__' + tag) : '');
-    const addressWritable = new AddressWritable(readable, join(this.incomingDirname, tempName), tag);
+  //private async incomingStream(readable:NodeJS.ReadableStream, uploadTag:string|void) {
+  private async incomingStream(payload) {
+    const { timestamp, inStream, uploadTag } = payload;
+    if (!timestamp) throw new Error('Storage.incomingStream: mising payload.timestamp');
+    if (!inStream) throw new Error('Storage.incomingStream: mising payload.inStream');
 
-    return addressWritable.runPipeline().then(() => addressWritable.validate());
+    try {
+
+      const tempName = timestamp + (uploadTag ? ('__' + uploadTag) : '');
+      //    const addressWritable = new AddressWritable(inStream, join(this.incomingDirname, tempName), uploadTag);
+      const addressWritable = new AddressWritable(inStream, join(this.incomingDirname, tempName));
+      delete payload.inStream;
+
+      //    const res1 = await addressWritable.runPipeline({uploadTag});
+      //const res1 = await addressWritable.runPipeline({
+      payload = await addressWritable.runPipeline(payload);
+      console.log('Storage.incomingStream runPipeline', JSON.stringify(payload));
+      //console.log('Storage.incomingStream res1', JSON.stringify(res1));
+
+      const res2 = await addressWritable.validate();
+      //return res2;
+
+      payload = await addressWritable.validate2(payload);
+      //return await
+
+      randomThrow && randomThrow(0.1, 'randomThrow: Storage.incomingStream');
+
+      return payload;
+    }
+    catch (error) {
+      if (error.timestamp === timestamp) throw error;
+
+      throw {
+        ...payload,
+        catch: 'Storage.incomingStream catch',
+        error: true,
+        errors: [ errorObject(error) ],
+        contentAddress: undefined,
+      };
+    }
+
   }
 
 
@@ -101,7 +137,7 @@ export class Storage {
     //console.log('casDirs:', JSON.stringify(casDirs));
     const contentCasDir = join(...casDirs);
 
-      randomThrow(0.05, 'Storage.contentCasDir');
+      randomThrow && randomThrow(0.05, 'Storage.contentCasDir');
 
     return contentCasDir;
   }
@@ -125,12 +161,12 @@ export class Storage {
 */
 
   private async move(incame) {
-      const { filename, contentAddress, sizeBytes, uploadBytesPerSecond, tag } = incame;
+      const { filename, contentAddress, sizeBytes, uploadBytesPerSecond, upoadTag } = incame;
 
     try {
 
       // early sanity check
-	randomThrow(0.05, 'access(filename)');
+	randomThrow && randomThrow(0.05, 'access(filename)');
       await access(filename, fsConstants.R_OK);
 
       const contentCasDir = this.contentCasDir(contentAddress);
@@ -146,7 +182,7 @@ export class Storage {
       //console.log('created:', created);
       if (!isDuplicate) {
         // create
-	  randomThrow(0.05, 'mkdirs');
+	  randomThrow && randomThrow(0.05, 'mkdirs');
         await mkdirs(join(this.casRootDirname, contentCasDir));
         //const path = await mkdirs(contentCasPath);
         //console.log('path:', JSON.stringify(path));
@@ -175,7 +211,7 @@ export class Storage {
             isDuplicate = true;
           }
           catch {
-	      randomThrow(0.05, 'renameSync');
+	      randomThrow && randomThrow(0.05, 'renameSync');
             renameSync(filename, targetFilename);
           }
         }
@@ -184,13 +220,19 @@ export class Storage {
       }
 
       if (isDuplicate) {
-	  randomThrow(0.05, 'unlink');
+	  randomThrow && randomThrow(0.05, 'unlink');
         // leave 5% of duplicates lying around
         if (Date.now() % 100 + 1 >= 5) {
           await unlink(filename);
         }
       }
 
+      return {
+        ...incame,
+	contentCasPath,
+	isDuplicate,
+      };
+/*
 	return {
 	    tag,
 	    sizeBytes,
@@ -199,27 +241,39 @@ export class Storage {
 	    isDuplicate,
 	    uploadBytesPerSecond,
 	};
+*/
     }
     catch (error) {
-	console.log(`move caught error: ${tag} : ${error}`);
+	console.log(`move caught error: ${upoadTag} : ${error}`);
 	throw errorObject(error);
 	//throw new Error(`Storage move error: ${error}`);
     }
   }
 
-    async storeStream(readable:NodeJS.ReadableStream, tag:string|void = undefined) {
-	try {
-	    const incame = await this.incomingStream(readable, tag);
-	    const result = await this.move(incame);
+  async storeStream(payload) {
 
-	    return result;
-	}
-	catch (error) {
-	console.log(`storeStream caught error: ${tag} : ${error}`);
-	    throw error;
-	}
+    //const inStream:NodeJS.ReadableStream, uploadTag:string|void = undefined
+    const timestamp = hrHrTimestamp();
+    //const incame = await this.incomingStream({ uploadTag, timestamp, inStream });
+    const incame = await this.incomingStream({ ...payload, timestamp });
+    const moveResult = await this.move(incame);
+    return moveResult;
+    //const result = this.validate(moveResult);
+    //return result;
+/*
+    try {
+      const incame = await this.incomingStream(readable, uploadTag);
+      const result = await this.move(incame);
+
+      return result;
     }
+    catch (error) {
+      console.log(`storeStream caught error: ${uploadTag} : ${error} : ${JSON.stringify(error)}`);
+      throw error;
+    }
+*/
 
+  }
 }
 
 import { createReadStream } from 'fs';
@@ -240,7 +294,10 @@ if (require.main === module) {
 
     const storage = new Storage(options);
 
-    const storeStream = filename => storage.storeStream(createReadStream(filename), basename(filename));
+    const storeStream = filename => storage.storeStream({
+      inStream: createReadStream(filename),
+      uploadTag: basename(filename),
+    });
 
     return promiseAllJson(args.map(storeStream));
 

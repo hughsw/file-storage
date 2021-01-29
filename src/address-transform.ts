@@ -12,29 +12,29 @@ export class AddressTransform extends Transform {
   protected sizeBytes = 0;
   private uploadBytesPerSecond: number;
 
-    //  private hash = createHash(this.hashType);
-    private readonly hash;
+  //  private hash = createHash(this.hashType);
+  private readonly hash;
   private start = Date.now();
 
-//  private randomError = false;
+  //  private randomError = false;
 
-    private hashConfig = defaultHashConfig();
+  private hashConfig = defaultHashConfig();
 
   constructor(options:{[key:string]: any;}|void = undefined) {
-      super();
-      if (options) {
-	  if (options.hashConfig) {
-	      this.hashConfig = {
-		  ...this.hashConfig,
-		  ...options.hashConfig,
-	      };
-	  }
-//	  this.randomError = options.randomError;
+    super();
+    if (options) {
+      if (options.hashConfig) {
+	this.hashConfig = {
+	  ...this.hashConfig,
+	  ...options.hashConfig,
+	};
       }
+      //	  this.randomError = options.randomError;
+    }
 
-      this.hash = createHash(this.hashConfig.hashType);
+    this.hash = createHash(this.hashConfig.hashType);
 
-      randomThrow(0.05, 'AddressTransform.constructor');
+    randomThrow && randomThrow(0.05, 'AddressTransform.constructor');
 
   }
 
@@ -72,22 +72,22 @@ export class AddressTransform extends Transform {
       //console.log('AddressTransform _transform push');
       this.push(chunk);
       this.updateThroughput();
-	randomThrow(0.005, 'AddressTransform._transform');
-//	const err = randomError(0.005, 'AddressTransform._transform');
-//	if (err) throw err;
+      randomThrow && randomThrow(0.005, 'AddressTransform._transform');
+      //	const err = randomError(0.005, 'AddressTransform._transform');
+      //	if (err) throw err;
     }
     catch (err) {
       error = err;
     }
     finally {
       //console.log('AddressTransform _transform callback');
-	//error = error || randomError(0.005, 'AddressTransform._transform');
-	/*
-      let sample;
-      if (this.randomError && !error && (sample = Math.random()) < 0.005) {
-	  error = new Error(`transform error: ${sample}`);
-      }
-*/
+      //error = error || randomError(0.005, 'AddressTransform._transform');
+      /*
+        let sample;
+        if (this.randomError && !error && (sample = Math.random()) < 0.005) {
+	error = new Error(`transform error: ${sample}`);
+        }
+      */
       callback(error);
     }
   };
@@ -98,21 +98,21 @@ export class AddressTransform extends Transform {
     try {
       this.contentAddress = this.hash.digest(this.hashConfig.hashDigest);
       this.updateThroughput();
-	randomThrow(0.1, 'AddressTransform._flush');
-	//const err = randomError(0.1 'AddressTransform._flush');
-	//if (err) throw err;
+      randomThrow && randomThrow(0.1, 'AddressTransform._flush');
+      //const err = randomError(0.1 'AddressTransform._flush');
+      //if (err) throw err;
     }
     catch (err) {
       error = err;
     }
     finally {
-//	error = error || randomError(0.1 'AddressTransform._flush');
-/*
-      let sample;
-      if (this.randomError && !error && (sample = Math.random()) < 0.1) {
-	  error = new Error(`flush error: ${sample}`);
-      }
-*/
+      //	error = error || randomError(0.1 'AddressTransform._flush');
+      /*
+        let sample;
+        if (this.randomError && !error && (sample = Math.random()) < 0.1) {
+	error = new Error(`flush error: ${sample}`);
+        }
+      */
       callback(error);
     }
   };
