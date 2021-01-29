@@ -5,7 +5,7 @@ import { AddressTransform } from './address-transform';
 import { defer, errorObject, randomError, randomThrow } from './utils';
 import { FILE_MODE } from './constants';
 
-import { HashConfig, defaultHashConfig } from './types';
+import { HashConfig, defaultHashConfig, StoragePayload } from './types';
 
 console.log(defaultHashConfig());
 
@@ -49,7 +49,8 @@ export class AddressWritable  {
   }
 
   // Run the streams, returning a promise that resolves to a payload with a bunch of state about the storage
-  runPipeline(inPayload:{[key:string]: any;}={}) {
+  //  runPipeline(inPayload:{[key:string]: any;}={}) {
+  runPipeline(inPayload: StoragePayload): Promise<StoragePayload> {
     this.inPayload = { ...inPayload };
 
     const { uploadTag } = this.inPayload;
@@ -164,7 +165,7 @@ export class AddressWritable  {
       //reject(`AddressWriteable go catch error: ${error}`);
     }
     finally {
-      return promise;
+      return promise as Promise<StoragePayload>;
     }
 
     //return promise;
@@ -266,7 +267,7 @@ export class AddressWritable  {
   }
 
   // resolve to state on success, reject with error on failure
-  validate2(inPayload) {
+  validate2(inPayload: StoragePayload): Promise<StoragePayload> {
     const { promise, resolve, reject } = defer();
 
     const { filename, contentAddress } = inPayload;
@@ -304,7 +305,8 @@ export class AddressWritable  {
       }
     });
 
-    return promise;
+    return promise as Promise<StoragePayload>;
+    //return promise;
   }
 
   protected addError(tag, error: Error) {

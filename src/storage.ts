@@ -8,10 +8,25 @@ import { hrHrTimestamp, defer, rangeMap, errorObject, randomThrow, promiseAllJso
 import { DIR_MODE } from './constants';
 
 
-import { HashConfig, defaultHashConfig } from './types';
+import { HashConfig, defaultHashConfig, StoragePayload } from './types';
 
 
 const { access, mkdir, chmod, rename, unlink } = fsPromises;
+
+const rethrow = (errorContext: { error: any; payload: StoragePayload; catchTag: string|void; }): never => {
+  const { error, payload, catchTag } = errorContext;
+
+  if (error.timestamp === payload.timestamp) throw error;
+
+  throw {
+    ...payload,
+    catchTag,
+    error: true,
+    errors: [ errorObject(error) ],
+    contentAddress: undefined,
+  };
+}
+
 
 const mkdirs = directory => mkdir(directory, { recursive: true, mode: DIR_MODE })
       .catch(error => {
@@ -44,10 +59,12 @@ export class Storage {
 
 
   //private async incomingStream(readable:NodeJS.ReadableStream, uploadTag:string|void) {
-  private async incomingStream(payload) {
-    const { timestamp, inStream, uploadTag } = payload;
-    if (!timestamp) throw new Error('Storage.incomingStream: mising payload.timestamp');
-    if (!inStream) throw new Error('Storage.incomingStream: mising payload.inStream');
+  private async incomingStream(payload: StoragePayload): Promise<StoragePayload> {
+    const { inStream, timestamp, uploadTag } = payload;
+
+    // Errors at this very high-level are not managed
+    if (!inStream || !timestamp)
+      throw new Error('Storage.incomingStream: mising property payload.inStream or payload.timestamp');
 
     try {
 
@@ -73,6 +90,11 @@ export class Storage {
       return payload;
     }
     catch (error) {
+      rethrow({ error, payload, catchTag: 'Storage.incomingStream catch' });
+    }
+/*
+    catch (error) {
+      rethrow({ error, payload, catchTag: 'Storage.incomingStream catch', });
       if (error.timestamp === timestamp) throw error;
 
       throw {
@@ -83,6 +105,7 @@ export class Storage {
         contentAddress: undefined,
       };
     }
+*/
 
   }
 
@@ -160,8 +183,8 @@ export class Storage {
     const contentCasDir = join(...dirs);
 */
 
-  private async move(incame) {
-      const { filename, contentAddress, sizeBytes, uploadBytesPerSecond, upoadTag } = incame;
+  private async move(payload) {
+    const { timestamp, filename, contentAddress, sizeBytes, uploadBytesPerSecond, upoadTag } = payload;
 
     try {
 
@@ -228,7 +251,7 @@ export class Storage {
       }
 
       return {
-        ...incame,
+        ...payload,
 	contentCasPath,
 	isDuplicate,
       };
@@ -244,36 +267,62 @@ export class Storage {
 */
     }
     catch (error) {
+      rethrow({ error, payload, catchTag: 'Storage.move catch' });
+    }
+/*
+    catch (error) {
+      if (error.timestamp === timestamp) throw error;
+
+      throw {
+        ...payload,
+        catch: 'Storage.move catch',
+        error: true,
+        errors: [ errorObject(error) ],
+        // TODO: move to some top-level sanitizer...
+        contentAddress: undefined,
+      };
+    }
+*/
+
+/*
+    catch (error) {
 	console.log(`move caught error: ${upoadTag} : ${error}`);
 	throw errorObject(error);
 	//throw new Error(`Storage move error: ${error}`);
     }
+*/
+
   }
 
-  async storeStream(payload) {
+  async storeStream(payload: { inStream: NodeJS.ReadableStream; uploadTag: string|void; }) {
 
     //const inStream:NodeJS.ReadableStream, uploadTag:string|void = undefined
     const timestamp = hrHrTimestamp();
     //const incame = await this.incomingStream({ uploadTag, timestamp, inStream });
-    const incame = await this.incomingStream({ ...payload, timestamp });
-    const moveResult = await this.move(incame);
-    return moveResult;
+    //const incame = await this.incomingStream({ ...payload, timestamp });
+    payload = await this.incomingStream({ ...payload, timestamp });
+    //const moveResult = await this.move(incame);
+    payload = await this.move(payload);
+
+    return payload;
+    //return moveResult;
     //const result = this.validate(moveResult);
     //return result;
-/*
-    try {
+    /*
+      try {
       const incame = await this.incomingStream(readable, uploadTag);
       const result = await this.move(incame);
 
       return result;
-    }
-    catch (error) {
+      }
+      catch (error) {
       console.log(`storeStream caught error: ${uploadTag} : ${error} : ${JSON.stringify(error)}`);
       throw error;
-    }
-*/
+      }
+    */
 
   }
+
 }
 
 import { createReadStream } from 'fs';

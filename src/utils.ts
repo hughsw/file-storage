@@ -28,7 +28,7 @@ export const defer = <T>(): { promise: Promise<T>; resolve:Voider<T>; reject:Voi
 //
 // As of 2021-01, MacBook-Pro, 2.7 GHz, Early 2015 model, Node JS 10.23.0, the hrHrTimestamp()
 // function takes roughly 3.2 microseconds to run
-export const hrHrTimestamp = ():string => {
+export const hrHrTimestamp = (): string => {
   const date = new Date;
   const nano = (process.hrtime()[1] + '').padStart(9, '0');
 
