@@ -148,4 +148,7 @@ export const randomThrow = (chance: number, tag: string = null) => {
     
 // unopinionated version of Promise.allSettled() that includes the rejections in the list
 // see: https://dev.to/vitalets/what-s-wrong-with-promise-allsettled-and-promise-any-5e6o
-export const promiseAll = (args: Array<Promise<any>>): Promise<Array<any>> => Promise.all(args.map(arg => arg.catch(rejection => rejection)));
+//export const promiseAll = (args: Array<Promise<any>>): Promise<Array<any>> => Promise.all(args.map(arg => arg.catch(rejection => rejection)));
+//export const promiseAll = (args: Array<any>): Promise<Array<any>> => Promise.all(args.map(arg => arg.catch(rejection => rejection)));
+export const promiseAll = (args: Array<any>): Promise<Array<any>> => Promise.all(args.map(arg => (async arg1 => arg1)(arg).catch(rejection => rejection)));
+promiseAll([null, undefined, true, 3, (async () => 4)(), Promise.resolve(5), Promise.reject(6)]).then(console.log).catch(console.error);
