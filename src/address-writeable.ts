@@ -18,27 +18,28 @@ console.log(defaultHashConfig());
 // - a .errors array and incomplete content-addressable properties
 //export class AddressWritable extends AddressTransform {
 export class AddressWritable  {
-
-  //  private addressTransform: NodeJS.ReadableStream & NodeJS.WritableStream;;
-  private addressTransform: AddressTransform;
-  private writeStream: NodeJS.WritableStream;
-
-  private readonly errors: Array<any> = [];
-
   private hashConfig = defaultHashConfig();
   //private readonly hashType = 'sha256';
   //    private readonly hashType = 'sha1';
   //  private readonly hashDigest = 'hex';
 
-  //private inPayload: {[key:string]: any;};
-  private inPayload: StoragePayload;
 
-  private inStream:NodeJS.ReadableStream;
-  private filename: string;
+//  //  private addressTransform: NodeJS.ReadableStream & NodeJS.WritableStream;;
+//  private addressTransform: AddressTransform;
+//  private writeStream: NodeJS.WritableStream;
+//
+////  private readonly errors: Array<any> = [];
+//
+//
+//  //private inPayload: {[key:string]: any;};
+//  private inPayload: StoragePayload;
+//
+//  private inStream:NodeJS.ReadableStream;
+//  private filename: string;
 
   //  constructor(private readonly inStream:NodeJS.ReadableStream, private readonly filename: string, private readonly clientTag:string|void=undefined) {
   //  constructor(private readonly inStream:NodeJS.ReadableStream, private readonly filename: string) {
-  constructor() {
+//  constructor() {
     //super();
 
 /*
@@ -53,23 +54,25 @@ export class AddressWritable  {
 
     randomThrow && randomThrow(0.05, 'AddressWritable.constructor');
 */
-  }
+//  }
 
   // Run the streams, returning a promise that resolves to a payload with a bunch of state about the storage
   //  runPipeline(inPayload:{[key:string]: any;}={}) {
   runPipeline(inPayload: StoragePayload): Promise<StoragePayload> {
-    this.inPayload = inPayload;
+//    this.inPayload = inPayload;
 
     const { uploadTag, inStream, filename } = inPayload;
-    this.inStream = inStream;
-    this.filename = filename;
+//    this.inStream = inStream;
+//    this.filename = filename;
 
-    this.addressTransform = new AddressTransform({
+//    this.addressTransform = new AddressTransform({
+    const addressTransform = new AddressTransform({
       hashConfig: this.hashConfig,
       //	  randomError: undefined,
     });
 
-    this.writeStream = createWriteStream(this.filename, { mode: FILE_MODE });
+    const writeStream = createWriteStream(filename, { mode: FILE_MODE });
+    //this.writeStream = createWriteStream(this.filename, { mode: FILE_MODE });
 
     const payload = (error=undefined): StoragePayload => {
       //const state:{[key:string]: any;} = {
@@ -77,7 +80,8 @@ export class AddressWritable  {
         //	  ...super.state,
         //tag: this.clientTag,
         ...inPayload,
-        ...this.addressTransform.payload,
+        ...addressTransform.payload,
+        //...this.addressTransform.payload,
         //filename: this.filename,
         filename,
       };
@@ -121,24 +125,24 @@ export class AddressWritable  {
 
     try {
       //this.inStream.on('error', error => console.log('AddressWritable inStream error:', error));
-      this.inStream.on('error', error => {
+      inStream.on('error', error => {
         reject(payload(error));
         //return reject(error);
 //        this.addError('inStream on error', error);
 //        myReject();
         //this.end();
       });
-      this.inStream.on('close', () => console.log('AddressWritable.inStream close', uploadTag));
+      inStream.on('close', () => console.log('AddressWritable.inStream close', uploadTag));
       //this.inStream.on('close', () => console.log('AddressWritable.inStream close', this.clientTag));
 
 
-      this.addressTransform.on('error', error => {
+      addressTransform.on('error', error => {
         reject(payload(error));
         //return reject(error);
 //        this.addError('AddressWritable on error', error);
 //        myReject();
       });
-      this.addressTransform.on('close', () => console.log('AddressWritable close', uploadTag));
+      addressTransform.on('close', () => console.log('AddressWritable close', uploadTag));
       //this.addressTransform.on('close', () => console.log('AddressWritable close', this.clientTag));
       /*
         this.on('error', error => {
@@ -149,7 +153,7 @@ export class AddressWritable  {
         this.on('close', () => console.log('AddressWritable close', this.clientTag));
       */
 
-      this.writeStream.on('error', error => {
+      writeStream.on('error', error => {
         reject(payload(error));
 //        this.addError('writeStream on error', error);
         //reject(this.state);
@@ -158,23 +162,23 @@ export class AddressWritable  {
 //        myReject();
       });
 
-      this.writeStream.on('close', () => console.log('AddressWritable.writeStream close', uploadTag));
+      writeStream.on('close', () => console.log('AddressWritable.writeStream close', uploadTag));
       //this.writeStream.on('close', () => console.log('AddressWritable.writeStream close', this.clientTag));
       //this.writeStream.on('close', () => (this.errors.length === 0 ? resolve(this.state) : myReject()));
       //this.writeStream.on('close', () => (this.errors.length === 0 ? myResolve() : myReject()));
 
       //*
-      this.writeStream.on('close', async () => {
+      writeStream.on('close', async () => {
         let error;
         try {
 	  // quick consistency check
-	  const { size } = await fsPromises.stat(this.filename);
+	  const { size } = await fsPromises.stat(filename);
 	  //console.log('AddressWritable.writeStream close sizes:', size, this.size);
           const errOffset = randomError && randomError(0.05) ? 1 : 0;
-          const sizeBytes = this.addressTransform.payload.sizeBytes - errOffset;
+          const sizeBytes = addressTransform.payload.sizeBytes - errOffset;
 	  //if (size !== this.sizeBytes - errOffset)
           if (size !== sizeBytes)
-	    throw new Error(`expected written file '${this.filename}' to be ${sizeBytes} bytes, stat gives ${size}`);
+	    throw new Error(`expected written file '${filename}' to be ${sizeBytes} bytes, stat gives ${size}`);
         }
         catch (err) {
           error = err;
@@ -197,12 +201,12 @@ export class AddressWritable  {
 
       // We handle use of the Readable interface
       console.log('AddressWriteable.inStream.pipe(AddressWritable.addressTransform)');
-      this.inStream.pipe(this.addressTransform);
+      inStream.pipe(addressTransform);
 
       randomThrow && randomThrow(0.05, 'AddressWritable.runPipeline middle');
 
       console.log('AddressWriteable.addressTransform.pipe(AddressWritable.writeStream)');
-      this.addressTransform.pipe(this.writeStream);
+      addressTransform.pipe(writeStream);
       /*
 
       // We handle use of the Readable interface
@@ -281,6 +285,7 @@ export class AddressWritable  {
   }
 */
 
+/*
   get state(): StoragePayload {
     //const state:{[key:string]: any;} = {
     const state: StoragePayload = {
@@ -301,6 +306,7 @@ export class AddressWritable  {
     }
     return state;
   }
+*/
 
 /*
   // resolve to state on success, reject with error on failure
@@ -418,6 +424,7 @@ export class AddressWritable  {
   }
 */
 
+/*
   protected addError(tag, error: Error) {
     console.log('AddressWritable error:', tag, this.errors.length, this.inPayload.uploadTag, ':', error);
     //console.log('AddressWritable error:', tag, this.errors.length, this.clientTag, ':', error);
@@ -433,6 +440,7 @@ export class AddressWritable  {
     this.errors.push(errorObject(error));
     //this.errors.push(error);
   }
+*/
 
 }
 
