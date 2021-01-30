@@ -70,19 +70,28 @@ export class Storage {
 
       const tempName = timestamp + (uploadTag ? ('__' + uploadTag) : '');
       //    const addressWritable = new AddressWritable(inStream, join(this.incomingDirname, tempName), uploadTag);
-      const addressWritable = new AddressWritable(inStream, join(this.incomingDirname, tempName));
-      delete payload.inStream;
+      const filename = join(this.incomingDirname, tempName);
+      //const addressWritable = new AddressWritable(inStream, join(this.incomingDirname, tempName));
+      //delete payload.inStream;
+
+      const addressWritable = new AddressWritable();
 
       //    const res1 = await addressWritable.runPipeline({uploadTag});
       //const res1 = await addressWritable.runPipeline({
-      payload = await addressWritable.runPipeline(payload);
+      payload = await addressWritable.runPipeline({ ...payload, filename });
+      delete payload.inStream;
       console.log('Storage.incomingStream runPipeline', JSON.stringify(payload));
       //console.log('Storage.incomingStream res1', JSON.stringify(res1));
 
-      const res2 = await addressWritable.validate();
+      //const res2 = await addressWritable.validate();
       //return res2;
 
-      payload = await addressWritable.validate2(payload);
+//      payload = await addressWritable.validate2(payload);
+//      delete payload.inStream;
+
+      //payload = await addressWritable.validate3(payload);
+      payload = await AddressWritable.validate3(payload);
+      //delete payload.inStream;
       //return await
 
       randomThrow && randomThrow(0.1, 'randomThrow: Storage.incomingStream');
