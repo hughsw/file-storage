@@ -30,7 +30,8 @@ export class AddressWritable  {
   //    private readonly hashType = 'sha1';
   //  private readonly hashDigest = 'hex';
 
-  private inPayload: {[key:string]: any;};
+  //private inPayload: {[key:string]: any;};
+  private inPayload: StoragePayload;
 
   //  constructor(private readonly inStream:NodeJS.ReadableStream, private readonly filename: string, private readonly clientTag:string|void=undefined) {
   constructor(private readonly inStream:NodeJS.ReadableStream, private readonly filename: string) {
@@ -51,11 +52,12 @@ export class AddressWritable  {
   // Run the streams, returning a promise that resolves to a payload with a bunch of state about the storage
   //  runPipeline(inPayload:{[key:string]: any;}={}) {
   runPipeline(inPayload: StoragePayload): Promise<StoragePayload> {
-    this.inPayload = { ...inPayload };
+    this.inPayload = inPayload;
 
     const { uploadTag } = this.inPayload;
 
-    const { promise, resolve, reject } = defer();
+    //const { promise, resolve, reject } = defer<Promise<StoragePayload>>();
+    const { promise, resolve, reject } = defer<StoragePayload>();
 
     let doResolveOrReject = true;
     const myReject = () => {
@@ -165,7 +167,8 @@ export class AddressWritable  {
       //reject(`AddressWriteable go catch error: ${error}`);
     }
     finally {
-      return promise as Promise<StoragePayload>;
+      return promise;;
+      //return promise as Promise<StoragePayload>;
     }
 
     //return promise;
@@ -217,13 +220,14 @@ export class AddressWritable  {
   }
   */
 
-  protected get size() {
+  protected get size(): number {
     //return super.state.sizeBytes;
     return this.addressTransform.state.sizeBytes;
   }
 
-  get state() {
-    const state:{[key:string]: any;} = {
+  get state(): StoragePayload {
+    //const state:{[key:string]: any;} = {
+    const state: StoragePayload = {
       //	  ...super.state,
       //tag: this.clientTag,
       ...this.inPayload,

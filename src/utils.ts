@@ -3,16 +3,42 @@
 // result to be resolved is lexcially separate from the logic that returns the promise.  It
 // also supports simple try/catch/finally patterns with promises, logic, and callbacks.
 //
+// Promise constructor signature
+// https://github.com/Microsoft/TypeScript/blob/master/lib/lib.es2015.promise.d.ts#L33
+// new <T>(executor: (resolve: (value: T | PromiseLike<T>) => void, reject: (reason?: any) => void) => void): Promise<T>;
+//
 // Based on the functionality of defer() from the promise-callbacks package.
-type Voider<T> = (value:T) => void;
-export const defer = <T>(): { promise: Promise<T>; resolve:Voider<T>; reject:Voider<any>; } => {
+type Resolver<T> = (value: T | PromiseLike<T>) => void;
+type Rejecter = (reason?: any) => void;
+export const defer = <T>(): { promise: Promise<T>; resolve: Resolver<T>; reject: Rejecter; } => {
 
   // These two assignments don't do anything except prevent the strictNullChecks error,
   // e.g.: "Variable 'reject' is used before being assigned."  We know (empirically) that
   // the Promise constructor calls the function it's handed and so assigns to the
   // variables, but the compiler doesn't know that.
 
-  let resolve:Voider<T> = (_:T) => undefined;
+  let resolve: Resolver<T> = (value: T | PromiseLike<T>) => undefined;
+  let reject: Rejecter = (reason?: any) => undefined;
+  // console.log('defer 0:', resolve, reject);
+  //  const promise = new Promise<T>((...args) => [resolve, reject] = args);
+  const promise = new Promise<T>((res, rej) => (resolve = res, reject = rej, undefined));
+  // console.log('defer 1:', resolve, reject, promise);
+
+  return { promise, resolve, reject };
+};
+
+/*
+// Based on the functionality of defer() from the promise-callbacks package.
+type VoiderX<T> = (value:T) => Promise<T>;
+type Voider<T> = (value:T) => void;
+export const defer = <T>(): { promise: Promise<T>; resolve:VoiderX<T>; reject:Voider<any>; } => {
+
+  // These two assignments don't do anything except prevent the strictNullChecks error,
+  // e.g.: "Variable 'reject' is used before being assigned."  We know (empirically) that
+  // the Promise constructor calls the function it's handed and so assigns to the
+  // variables, but the compiler doesn't know that.
+
+  let resolve:VoiderX<T> = (_:T) => undefined;
   let reject:Voider<any> = (_:any) => undefined;
   // console.log('defer 0:', resolve, reject);
   const promise = new Promise<T>((...args) => [resolve, reject] = args);
@@ -20,7 +46,7 @@ export const defer = <T>(): { promise: Promise<T>; resolve:Voider<T>; reject:Voi
 
   return { promise, resolve, reject };
 };
-
+//HSW*/
 
 
 // hrHrTimestamp():string -- High-resolution human-readable timestamp with date, time, and
@@ -159,5 +185,6 @@ export const randomThrow = (chance: number, tag: string = null):void => {
 
 export const promiseAll = (args: Array<any>): Promise<Array<any>> => Promise.all(args.map(arg => (async arg1 => arg1)(arg).catch(rejection => rejection)));
 export const promiseAllJson = (args: Array<any>): Promise<Array<any>> => Promise.all(args.map(arg => (async arg1 => arg1)(arg).catch(errorObject)));
+// TODO: use Promise.resolve(arg) instead of the async iffe
 
 promiseAll([null, undefined, true, 3, (async () => 4)(), Promise.resolve(5), Promise.reject(6)]).then(console.log).catch(console.error);
