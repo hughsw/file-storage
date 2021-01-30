@@ -222,7 +222,7 @@ export class AddressWritable  {
 
   protected get sizeBytes(): number {
     //return super.state.sizeBytes;
-    return this.addressTransform.state.sizeBytes;
+    return this.addressTransform.payload.sizeBytes;
   }
 
   get state(): StoragePayload {
@@ -231,7 +231,7 @@ export class AddressWritable  {
       //	  ...super.state,
       //tag: this.clientTag,
       ...this.inPayload,
-      ...this.addressTransform.state,
+      ...this.addressTransform.payload,
       filename: this.filename,
     };
     if (this.errors.length > 0) {

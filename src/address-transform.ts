@@ -5,7 +5,7 @@ import { HashConfig, defaultHashConfig } from './types';
 import { randomThrow } from './utils';
 
 // Gather size and content-addressable store key from a stream, and also a measure of throughput
-// Result is in getter state
+// Result is in getter payload
 export class AddressTransform extends Transform {
 
   private contentAddress: string;
@@ -38,16 +38,15 @@ export class AddressTransform extends Transform {
 
   }
 
-  // The state can be accessed any time to get sizeBytes and uploadBytesPerSecond.  contentAddress
+  // The payload can be accessed any time to get sizeBytes and uploadBytesPerSecond.  contentAddress
   // only appears after the stream is flushed (AddressTransform.end(), _flush()), at which
-  // point the state will never change.
-  get state() {
-    const state:{[key:string]: any;} = {
+  // point the payload will never change.
+  get payload(): { contentAddress: string; sizeBytes: number; uploadBytesPerSecond: number; } {
+    return {
       contentAddress: this.contentAddress,
       sizeBytes: this.sizeBytes,
       uploadBytesPerSecond: this.uploadBytesPerSecond,
     };
-    return state;
   }
 
   private updateThroughput() {
