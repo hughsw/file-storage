@@ -21,10 +21,11 @@ export const defaultHashConfig = ():HashConfig => ({
 });
 
 export interface StoragePayload {
-  inStream: NodeJS.ReadableStream;
+//  inStream: NodeJS.ReadableStream;
   uploadTag: string|void;
   timestamp: string;
   contentAddress?: string;
   sizeBytes?: number;
+  uploadBytesPerSecond?: number;
   [key: string]: any;
 }

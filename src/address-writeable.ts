@@ -125,8 +125,8 @@ export class AddressWritable  {
 	  const { size } = await fsPromises.stat(this.filename);
 	  //console.log('AddressWritable.writeStream close sizes:', size, this.size);
           const errOffset = randomError && randomError(0.05) ? 1 : 0;
-	  if (size !== this.size - errOffset)
-	    throw new Error(`expected written file '${this.filename}' to be ${this.size-errOffset} bytes, stat gives ${size}`);
+	  if (size !== this.sizeBytes - errOffset)
+	    throw new Error(`expected written file '${this.filename}' to be ${this.sizeBytes-errOffset} bytes, stat gives ${size}`);
         }
         catch (error) {
 	  this.addError('writeStream on close', error);
@@ -220,7 +220,7 @@ export class AddressWritable  {
   }
   */
 
-  protected get size(): number {
+  protected get sizeBytes(): number {
     //return super.state.sizeBytes;
     return this.addressTransform.state.sizeBytes;
   }
@@ -238,6 +238,7 @@ export class AddressWritable  {
       console.log('AddressWritable get state(), before error-based deletes:', JSON.stringify(state));
       // these are likely bogus
       //delete state.sizeBytes;
+      // TOOO: high-level cleanup of properties
       delete state.contentAddress;
       state.error = true;
       state.errors = [...this.errors];
@@ -272,7 +273,7 @@ export class AddressWritable  {
 
   // resolve to state on success, reject with error on failure
   validate2(inPayload: StoragePayload): Promise<StoragePayload> {
-    const { promise, resolve, reject } = defer();
+    const { promise, resolve, reject } = defer<StoragePayload>();
 
     const { filename, contentAddress } = inPayload;
 

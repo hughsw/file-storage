@@ -294,13 +294,14 @@ export class Storage {
 
   }
 
-  async storeStream(payload: { inStream: NodeJS.ReadableStream; uploadTag: string|void; }) {
-
-    //const inStream:NodeJS.ReadableStream, uploadTag:string|void = undefined
+  async storeStream(config: { inStream: NodeJS.ReadableStream; uploadTag: string|void; }) {
     const timestamp = hrHrTimestamp();
+
+    let payload: StoragePayload = { ...config, timestamp };
+    //const inStream:NodeJS.ReadableStream, uploadTag:string|void = undefined
     //const incame = await this.incomingStream({ uploadTag, timestamp, inStream });
     //const incame = await this.incomingStream({ ...payload, timestamp });
-    payload = await this.incomingStream({ ...payload, timestamp });
+    payload = await this.incomingStream(payload);
     //const moveResult = await this.move(incame);
     payload = await this.move(payload);
 
