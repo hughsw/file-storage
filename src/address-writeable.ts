@@ -9,192 +9,82 @@ import { HashConfig, defaultHashConfig, StoragePayload } from './types';
 
 console.log(defaultHashConfig());
 
-// Clients should only use the Writable interface.
-// 'close' and 'error' are the interesting events to monitor
-// We only emit the first error that occurs.
-// After 'close', the state will have either:
-// - valid content-addressable properties and no .errors
-// or
-// - a .errors array and incomplete content-addressable properties
-//export class AddressWritable extends AddressTransform {
 export class AddressWritable  {
   private hashConfig = defaultHashConfig();
-  //private readonly hashType = 'sha256';
-  //    private readonly hashType = 'sha1';
-  //  private readonly hashDigest = 'hex';
 
-
-//  //  private addressTransform: NodeJS.ReadableStream & NodeJS.WritableStream;;
-//  private addressTransform: AddressTransform;
-//  private writeStream: NodeJS.WritableStream;
-//
-////  private readonly errors: Array<any> = [];
-//
-//
-//  //private inPayload: {[key:string]: any;};
-//  private inPayload: StoragePayload;
-//
-//  private inStream:NodeJS.ReadableStream;
-//  private filename: string;
-
-  //  constructor(private readonly inStream:NodeJS.ReadableStream, private readonly filename: string, private readonly clientTag:string|void=undefined) {
-  //  constructor(private readonly inStream:NodeJS.ReadableStream, private readonly filename: string) {
-//  constructor() {
-    //super();
-
-/*
-    this.addressTransform = new AddressTransform({
-      hashConfig: this.hashConfig,
-      //	  randomError: undefined,
-    });
-    //this.addressTransform = new AddressTransform({randomError:true});
-
-    //const writeStream = createWriteStream(this.filename, { mode: FILE_MODE });
-    this.writeStream = createWriteStream(this.filename, { mode: FILE_MODE });
-
-    randomThrow && randomThrow(0.05, 'AddressWritable.constructor');
-*/
-//  }
-
-  // Run the streams, returning a promise that resolves to a payload with a bunch of state about the storage
-  //  runPipeline(inPayload:{[key:string]: any;}={}) {
+  // Run the upload, returning a promise that resolves to a payload with a bunch of state about the storage
   runPipeline(inPayload: StoragePayload): Promise<StoragePayload> {
-//    this.inPayload = inPayload;
-
     const { uploadTag, inStream, filename } = inPayload;
-//    this.inStream = inStream;
-//    this.filename = filename;
 
-//    this.addressTransform = new AddressTransform({
     const addressTransform = new AddressTransform({
       hashConfig: this.hashConfig,
-      //	  randomError: undefined,
     });
 
     const writeStream = createWriteStream(filename, { mode: FILE_MODE });
-    //this.writeStream = createWriteStream(this.filename, { mode: FILE_MODE });
 
     const payload = (error=undefined): StoragePayload => {
-      //const state:{[key:string]: any;} = {
       const state: StoragePayload = {
-        //	  ...super.state,
-        //tag: this.clientTag,
         ...inPayload,
         ...addressTransform.payload,
-        //...this.addressTransform.payload,
-        //filename: this.filename,
         filename,
       };
       if (error) {
         console.log('AddressWritable runPipeline state, before error-based deletes:', JSON.stringify(state));
-        // these are likely bogus
-        //delete state.sizeBytes;
         // TOOO: high-level cleanup of properties
         delete state.contentAddress;
         state.error = true;
-        //state.errors = [...this.errors];
         state.errors = [ errorObject(error) ];
       }
       return state;
     };
 
-//    const { uploadTag } = this.inPayload;
-
-    //const { promise, resolve, reject } = defer<Promise<StoragePayload>>();
     const { promise, resolve, reject } = defer<StoragePayload>();
 
-/*
-    let doResolveOrReject = true;
-    const myReject = () => {
-      if (doResolveOrReject) {
-        doResolveOrReject = false;
-        reject(this.state);
-      }
-    };
-    const myResolve = () => {
-      if (doResolveOrReject) {
-        doResolveOrReject = false;
-        resolve(this.state);
-      }
-    };
-*/
-    // Through a lengthy bitter experience we have learned that the Stream APIs are not
+    const rejectError = error => reject(payload(error));
+
+    // Through a lengthy bitter experience we have learned that the async Stream APIs are not
     // reliable following an error.  Using them after an error is risky.  In particular, Node
     // JS sometimes crashes after a 'No space left on device' error if you continue to work
     // with the stream.  So, we resolve immediately with an error condition.
 
     try {
-      //this.inStream.on('error', error => console.log('AddressWritable inStream error:', error));
-      inStream.on('error', error => {
-        reject(payload(error));
-        //return reject(error);
-//        this.addError('inStream on error', error);
-//        myReject();
-        //this.end();
-      });
+      inStream.on('error', rejectError);
+      //error => {
+      //  reject(payload(error));
+      //});
       inStream.on('close', () => console.log('AddressWritable.inStream close', uploadTag));
-      //this.inStream.on('close', () => console.log('AddressWritable.inStream close', this.clientTag));
 
-
-      addressTransform.on('error', error => {
-        reject(payload(error));
-        //return reject(error);
-//        this.addError('AddressWritable on error', error);
-//        myReject();
-      });
+      addressTransform.on('error', rejectError);
+      //error => {
+      //  reject(payload(error));
+      //});
       addressTransform.on('close', () => console.log('AddressWritable close', uploadTag));
-      //this.addressTransform.on('close', () => console.log('AddressWritable close', this.clientTag));
-      /*
-        this.on('error', error => {
-        //return reject(error);
-        this.addError('AddressWritable on error', error);
-        myReject();
-        });
-        this.on('close', () => console.log('AddressWritable close', this.clientTag));
-      */
 
-      writeStream.on('error', error => {
-        reject(payload(error));
-//        this.addError('writeStream on error', error);
-        //reject(this.state);
-        //this.writeStream.destroy();
-        //this.destroy();
-//        myReject();
-      });
+      writeStream.on('error', rejectError);
+      //error => {
+      //  reject(payload(error));
+      //});
 
-      writeStream.on('close', () => console.log('AddressWritable.writeStream close', uploadTag));
-      //this.writeStream.on('close', () => console.log('AddressWritable.writeStream close', this.clientTag));
-      //this.writeStream.on('close', () => (this.errors.length === 0 ? resolve(this.state) : myReject()));
-      //this.writeStream.on('close', () => (this.errors.length === 0 ? myResolve() : myReject()));
+      //writeStream.on('close', () => console.log('AddressWritable.writeStream close', uploadTag));
 
       //*
       writeStream.on('close', async () => {
+        console.log('AddressWritable.writeStream close', uploadTag);
         let error;
         try {
 	  // quick consistency check
 	  const { size } = await fsPromises.stat(filename);
-	  //console.log('AddressWritable.writeStream close sizes:', size, this.size);
           const errOffset = randomError && randomError(0.05) ? 1 : 0;
           const sizeBytes = addressTransform.payload.sizeBytes - errOffset;
-	  //if (size !== this.sizeBytes - errOffset)
           if (size !== sizeBytes)
 	    throw new Error(`expected written file '${filename}' to be ${sizeBytes} bytes, stat gives ${size}`);
         }
         catch (err) {
           error = err;
-        //catch (error) {
-	  //this.addError('writeStream on close', error);
         }
         finally {
           console.log('AddressWritable on close finally', uploadTag);
-	  //console.log('AddressWritable on close finally', this.clientTag);
           error ? reject(payload(error)) : resolve(payload());
-/*
-	  this.errors.length === 0
-	    ? myResolve()
-	    : myReject();
-*/
-	  //(this.errors.length === 0 ? resolve : reject)(this.state);
         }
       });
       //HSW*/
@@ -207,133 +97,17 @@ export class AddressWritable  {
 
       console.log('AddressWriteable.addressTransform.pipe(AddressWritable.writeStream)');
       addressTransform.pipe(writeStream);
-      /*
 
-      // We handle use of the Readable interface
-      console.log('AddressWriteable.inStream.pipe(this)');
-      this.inStream.pipe(this);
-
-      console.log('AddressWriteable.pipe(this.writeStream)');
-      this.pipe(this.writeStream);
-      */
       randomThrow && randomThrow(0.05, 'AddressWritable.runPipeline end');
     }
     catch (error) {
       reject(payload(error));
-//      this.addError('AddressWriteable go catch', error);
-//      myReject();
-      //reject(`AddressWriteable go catch error: ${error}`);
     }
     finally {
       return promise;;
-      //return promise as Promise<StoragePayload>;
     }
 
-    //return promise;
   }
-
-  /*
-  // Run the streams, returning a promise
-  goX() {
-  const { promise, resolve, reject } = defer();
-
-  //this.inStream.on('error', error => console.log('AddressWritable inStream error:', error));
-  this.inStream.on('error', error => {
-  this.addError('inStream on error', error);
-  });
-  this.inStream.on('close', () => console.log('AddressWritable.inStream close'));
-
-
-  this.on('error', error => {
-  this.addError('AddressWritable on error', error);
-  });
-  this.on('close', () => console.log('AddressWritable close'));
-
-  this.writeStream.on('error', error => {
-  this.addError('writeStream on error', error);
-  });
-
-  this.writeStream.on('close', () => console.log('AddressWritable.writeStream close'));
-  this.writeStream.on('close', async () => {
-  try {
-  const { size } = await fsPromises.stat(this.filename);
-  if (size !== this.size)
-  throw new Error(`expected written file '${this.filename}' to be ${this.size} bytes, stat gives ${size}`);
-  }
-  catch (error) {
-  this.addError('writeStream on close', error);
-  }
-  finally {
-  console.log('AddressWritable emit close');
-  this.emit('close');
-  }
-  });
-
-  console.log('AddressWriteable.pipe(this.writeStream)');
-  this.pipe(this.writeStream);
-
-  // We handle use of the Readable interface
-  console.log('AddressWriteable.inStream.pipe(this)');
-  this.inStream.pipe(this);
-  }
-  */
-
-/*
-  protected get sizeBytes(): number {
-    //return super.state.sizeBytes;
-    return this.addressTransform.payload.sizeBytes;
-  }
-*/
-
-/*
-  get state(): StoragePayload {
-    //const state:{[key:string]: any;} = {
-    const state: StoragePayload = {
-      //	  ...super.state,
-      //tag: this.clientTag,
-      ...this.inPayload,
-      ...this.addressTransform.payload,
-      filename: this.filename,
-    };
-    if (this.errors.length > 0) {
-      console.log('AddressWritable get state(), before error-based deletes:', JSON.stringify(state));
-      // these are likely bogus
-      //delete state.sizeBytes;
-      // TOOO: high-level cleanup of properties
-      delete state.contentAddress;
-      state.error = true;
-      state.errors = [...this.errors];
-    }
-    return state;
-  }
-*/
-
-/*
-  // resolve to state on success, reject with error on failure
-  validate() {
-    const { promise, resolve, reject } = defer();
-
-    const inStream = createReadStream(this.filename);
-    inStream.on('error', reject);
-
-    const hash = createHash(this.hashConfig.hashType);
-    inStream.on('data', chunk => hash.update(chunk));
-    inStream.on('close', () => {
-      const state = this.state;
-      //const address = (Math.random() < 0.1 ? 'XXX_' : '') + hash.digest(this.hashConfig.hashDigest);
-      const address = (randomError && randomError(0.1) ? 'XXX_' : '') + hash.digest(this.hashConfig.hashDigest);
-      if (address === state.contentAddress) {
-	resolve(state);
-      }
-      else {
-	this.addError('validate error', new Error(`expected file '${this.filename}' to have address ${this.state.contentAddress}, but validator calculated ${address}`));
-	reject(this.state);
-      }
-    });
-
-    return promise;
-  }
-*/
 
   // resolve to state on success, reject with error on failure
   static validate3(inPayload: StoragePayload): Promise<StoragePayload> {
@@ -379,112 +153,23 @@ export class AddressWritable  {
     return promise;
   }
 
-/*
-  // resolve to state on success, reject with error on failure
-  validate2(inPayload: StoragePayload): Promise<StoragePayload> {
-    const { promise, resolve, reject } = defer<StoragePayload>();
-
-    const { filename, contentAddress } = inPayload;
-
-    const inStream = createReadStream(this.filename + (randomError && randomError(0.1) ? '_validate2_' : ''));
-    inStream.on('error', error => {
-      this.addError('AddressWritable.validate2 inStream on error', error);
-      reject({
-        ...inPayload,
-        ...this.state,
-      });
-    });
-    //inStream.on('error', reject);
-
-    const hash = createHash(this.hashConfig.hashType);
-    inStream.on('data', chunk => hash.update(chunk));
-    inStream.on('close', () => {
-      const state = this.state;
-      //const address = (Math.random() < 0.1 ? 'XXX_' : '') + hash.digest(this.hashConfig.hashDigest);
-      const address = (randomError && randomError(0.1) ? 'XXX_validate2_' : '') + hash.digest(this.hashConfig.hashDigest);
-      if (address === state.contentAddress) {
-	//resolve(state);
-        resolve({
-          ...inPayload,
-          ...state,
-        });
-      }
-      else {
-	this.addError('validate error', new Error(`expected file '${this.filename}' to have address ${this.state.contentAddress}, but validator calculated ${address}`));
-        reject({
-          ...inPayload,
-          ...this.state,
-          contentAddress: undefined,
-        });
-      }
-    });
-
-    return promise as Promise<StoragePayload>;
-    //return promise;
-  }
-*/
-
-/*
-  protected addError(tag, error: Error) {
-    console.log('AddressWritable error:', tag, this.errors.length, this.inPayload.uploadTag, ':', error);
-    //console.log('AddressWritable error:', tag, this.errors.length, this.clientTag, ':', error);
-    // emit the first error
-    if (this.errors.length === 0) {
-      //this.emit('error', error);
-      //this.writeStream.end();
-      //this.writeStream.destroy();
-      //this.end();
-    }
-    // collect all errors for get state()
-    // e.g. "no space left on device" error also causes the check in 'close' to fail...
-    this.errors.push(errorObject(error));
-    //this.errors.push(error);
-  }
-*/
-
 }
 
 
 import { createReadStream } from 'fs';
 import { join } from 'path';
 
-//import { defer } from './defer';
-
-// console.log('require.main:', require.main);
-// console.log('module:', module);
 if (require.main === module) {
 
   const main = () => {
     const { promise, resolve, reject } = defer();
 
     try {
-      //const inputFile = createReadStream(join(__dirname, 'index.ts'));
       const inputFile = createReadStream(join('/Users/hugh/Downloads', 'FAA-H-8083-16B_Chapter_4.pdf'));
 
-      //const aw = new AddressWritable(inputFile, '/tmp/foonerxxyy');
       const aw = new AddressWritable();
-      //const aw = new AddressWritable('/Volumes/NoSpaceLeftOnDevice/fooneration');
-
-      /*
-        aw.on('error', error => console.error('aw on error:', error));
-        aw.on('finish', () => console.log('aw on finish'));
-        //aw.on('drain', () => console.log('aw on drain'));
-        //aw.on('pipe', () => console.log('aw on pipe'));
-        //aw.on('unpipe', () => console.log('aw on unpipe'));
-
-        aw.on('close', () => {
-        console.log('aw on close:', JSON.stringify(aw.state));
-        resolve(aw.state);
-        });
-      */
-
-      //console.log('inputFile.pipe(aw)')
-      //inputFile.pipe(aw);
-
-      //    throw new Error('barf');
     }
     catch (error) {
-      //    console.log('catch for reject');
       reject(error);
     }
     finally {
