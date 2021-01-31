@@ -13,6 +13,7 @@ import { HashConfig, defaultHashConfig, StoragePayload } from './types';
 
 const { access, mkdir, chmod, rename, unlink } = fsPromises;
 
+
 const rethrow = (errorContext: { error: any; payload: StoragePayload; catchTag: string|void; }): never => {
   const { error, payload, catchTag } = errorContext;
 
@@ -337,10 +338,26 @@ export class Storage {
 
 import { createReadStream } from 'fs';
 
+const safeCreateReadStream = (filename: string) => {
+  const stream = createReadStream(filename);
+  // if filename is a directory and an error handler is not installed, NodeJS will eventually crash with:
+  //   Error: EISDIR: illegal operation on a directory, read
+  stream.on('error', error => console.log(`safeCreateReadStream on error: filename '${filename}' : ${error}`));
+  return stream;
+};
+
 if (require.main === module) {
 
   const main = (args) => {
     console.log('main(): args:', '\n' + args.join('\n'));
+
+    //const streams = [args[0]].map(filename => createReadStream(filename));
+    //const streams = args.map(filename => createReadStream(filename));
+    //const streams = args.map(safeCreateReadStream);
+    //const streams = args.map(createReadStream);
+    //    console.log('streams:', streams);
+    //console.log('streams:', JSON.stringify(streams));
+    //return setTimeout(() => console.log('streams2:', JSON.stringify(streams)), 700);
 
     const options = {
       //incomingDirname: '/Volumes/NoSpaceLeftOnDevice/incoming',
@@ -354,7 +371,8 @@ if (require.main === module) {
     const storage = new Storage(options);
 
     const storeStream = filename => storage.storeStream({
-      inStream: createReadStream(filename),
+      //inStream: createReadStream(filename),
+      inStream: safeCreateReadStream(filename),
       uploadTag: basename(filename),
     });
 
@@ -363,11 +381,12 @@ if (require.main === module) {
 //    const work = promiseAllJson(args.map(filename => storage.storeStream(createReadStream(filename), basename(filename))));
 
 //    return work;
+
   };
 
-  main(process.argv.slice(2))
+  Promise.resolve(main(process.argv.slice(2)))
     .then(result => console.log('result:\n', JSON.stringify(result)))
-    .then(() => setTimeout(() => console.log('setTimeout'), 700))
+    .then(() => setTimeout(() => console.log('final setTimeout'), 700))
     .catch(error => {
       console.log('fail:', error, '\n*** fail ***');
       process.nextTick(() => process.exit(1));
