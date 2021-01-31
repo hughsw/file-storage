@@ -4,7 +4,7 @@ import { basename, join } from 'path';
 import { AddressWritable } from './address-writeable';
 //const { access } = fsPromises;
 //import { defer } from './defer';
-import { hrHrTimestamp, defer, rangeMap, errorObject, randomThrow, promiseAllJson } from './utils';
+import { hrHrTimestamp, defer, rangeMap, errorObject, randomError, randomThrow, promiseAllJson } from './utils';
 import { DIR_MODE } from './constants';
 
 
@@ -67,10 +67,10 @@ export class Storage {
       throw new Error('Storage.incomingStream: mising property payload.inStream or payload.timestamp');
 
     try {
-
       const tempName = timestamp + (uploadTag ? ('__' + uploadTag) : '');
       //    const addressWritable = new AddressWritable(inStream, join(this.incomingDirname, tempName), uploadTag);
-      const filename = join(this.incomingDirname, tempName);
+      const errName = randomError(0.05) ? 'no-such-dir' : undefined;
+      const filename = errName ? join(this.incomingDirname, errName, tempName) : join(this.incomingDirname, tempName);
       //const addressWritable = new AddressWritable(inStream, join(this.incomingDirname, tempName));
       //delete payload.inStream;
 

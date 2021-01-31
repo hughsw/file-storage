@@ -29,7 +29,8 @@ export class AddressWritable  {
         filename,
       };
       if (error) {
-        console.log('AddressWritable runPipeline state, before error-based deletes:', JSON.stringify(state));
+        console.log('AddressWritable runPipeline payload error:', error);
+        //console.log('AddressWritable runPipeline state, before error-based deletes:', JSON.stringify(state));
         // TOOO: high-level cleanup of properties
         delete state.contentAddress;
         state.error = true;
@@ -90,18 +91,20 @@ export class AddressWritable  {
       //HSW*/
 
       // We handle use of the Readable interface
-      console.log('AddressWriteable.inStream.pipe(AddressWritable.addressTransform)');
-      inStream.pipe(addressTransform);
-
-      randomThrow && randomThrow(0.05, 'AddressWritable.runPipeline middle');
 
       console.log('AddressWriteable.addressTransform.pipe(AddressWritable.writeStream)');
       addressTransform.pipe(writeStream);
 
+      randomThrow && randomThrow(0.05, 'AddressWritable.runPipeline middle');
+
+      console.log('AddressWriteable.inStream.pipe(AddressWritable.addressTransform)');
+      inStream.pipe(addressTransform);
+
       randomThrow && randomThrow(0.05, 'AddressWritable.runPipeline end');
     }
     catch (error) {
-      reject(payload(error));
+      rejectError(error);
+//      reject(payload(error));
     }
     finally {
       return promise;;

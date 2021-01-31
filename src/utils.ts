@@ -168,12 +168,15 @@ export const randomThrow = undefined;
 
 //*
 export const randomError = (chance: number, tag: string = null) => {
-    if (Math.random() < chance) return new Error(tag || `randomError at ${chance}`);
+  if (Math.random() < chance) return new Error(tag || `randomError at ${chance}`);
 };
 
 export const randomThrow = (chance: number, tag: string = null):void => {
-    const error = randomError(chance, tag);
-    if (error) throw error;
+  const error = randomError(chance, tag);
+  if (error) {
+    console.log('randomThrow:', error.message);
+    throw error;
+  }
 };
 //HSW*/
 
