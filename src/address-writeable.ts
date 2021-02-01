@@ -51,25 +51,12 @@ export class AddressWritable  {
     try {
       console.log(`runPipeline: '${filename}' add inStream.on('error', rejectError)`);
       inStream.on('error', rejectError);
-      //error => {
-      //  reject(payload(error));
-      //});
       inStream.on('close', () => console.log('AddressWritable.inStream close', uploadTag));
 
       addressTransform.on('error', rejectError);
-      //error => {
-      //  reject(payload(error));
-      //});
       addressTransform.on('close', () => console.log('AddressWritable close', uploadTag));
 
       writeStream.on('error', rejectError);
-      //error => {
-      //  reject(payload(error));
-      //});
-
-      //writeStream.on('close', () => console.log('AddressWritable.writeStream close', uploadTag));
-
-      //*
       writeStream.on('close', async () => {
         console.log('AddressWritable.writeStream close', uploadTag);
         let error;
@@ -89,23 +76,21 @@ export class AddressWritable  {
           error ? reject(payload(error)) : resolve(payload());
         }
       });
-      //HSW*/
 
       // We handle use of the Readable interface
 
-      console.log('AddressWriteable.addressTransform.pipe(AddressWritable.writeStream)');
-      addressTransform.pipe(writeStream);
+      console.log('AddressWriteable.inStream.pipe(AddressWritable.addressTransform)');
+      inStream.pipe(addressTransform);
 
       randomThrow && randomThrow(0.05, 'AddressWritable.runPipeline middle');
 
-      console.log('AddressWriteable.inStream.pipe(AddressWritable.addressTransform)');
-      inStream.pipe(addressTransform);
+      console.log('AddressWriteable.addressTransform.pipe(AddressWritable.writeStream)');
+      addressTransform.pipe(writeStream);
 
       randomThrow && randomThrow(0.05, 'AddressWritable.runPipeline end');
     }
     catch (error) {
       rejectError(error);
-//      reject(payload(error));
     }
     finally {
       return promise;;

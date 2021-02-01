@@ -1,7 +1,7 @@
-// defer() -- Create a new promise and return the promise itself and its resolve and reject
+// defer<T>() -- Create a new promise and return the promise itself and its resolve and reject
 // functions.  This dissection of a promise is useful for situations where the logic for the
-// result to be resolved is lexcially separate from the logic that returns the promise.  It
-// also supports simple try/catch/finally patterns with promises, logic, and callbacks.
+// result to be resolved is lexcially separate from the logic that returns the promise.  As
+// such, it supports simple try/catch/finally patterns with promises, logic, and callbacks.
 //
 // Promise constructor signature
 // https://github.com/Microsoft/TypeScript/blob/master/lib/lib.es2015.promise.d.ts#L33
@@ -26,27 +26,6 @@ export const defer = <T>(): { promise: Promise<T>; resolve: Resolver<T>; reject:
 
   return { promise, resolve, reject };
 };
-
-/*
-// Based on the functionality of defer() from the promise-callbacks package.
-type VoiderX<T> = (value:T) => Promise<T>;
-type Voider<T> = (value:T) => void;
-export const defer = <T>(): { promise: Promise<T>; resolve:VoiderX<T>; reject:Voider<any>; } => {
-
-  // These two assignments don't do anything except prevent the strictNullChecks error,
-  // e.g.: "Variable 'reject' is used before being assigned."  We know (empirically) that
-  // the Promise constructor calls the function it's handed and so assigns to the
-  // variables, but the compiler doesn't know that.
-
-  let resolve:VoiderX<T> = (_:T) => undefined;
-  let reject:Voider<any> = (_:any) => undefined;
-  // console.log('defer 0:', resolve, reject);
-  const promise = new Promise<T>((...args) => [resolve, reject] = args);
-  // console.log('defer 1:', resolve, reject, promise);
-
-  return { promise, resolve, reject };
-};
-//HSW*/
 
 
 // hrHrTimestamp():string -- High-resolution human-readable timestamp with date, time, and
@@ -136,9 +115,7 @@ export function* range(start:number, stop:number|undefined=undefined) {
   while (start < stop) yield start++;
 }
 
-//console.log(Array.from(range(20)));
-//console.log(Array.from(range(15,20)));
-//export rangeMap = (start:number, stop:number|void=undefined) => Array.from(range(start.stop)).map
+
 export const rangeMap = (stop:number, func) => Array.from(range(0, stop)).map(func);
 
 
@@ -183,11 +160,7 @@ export const randomThrow = (chance: number, tag: string = null):void => {
 
 // unopinionated version of Promise.allSettled() that includes the rejections in the list
 // see: https://dev.to/vitalets/what-s-wrong-with-promise-allsettled-and-promise-any-5e6o
-//export const promiseAll = (args: Array<Promise<any>>): Promise<Array<any>> => Promise.all(args.map(arg => arg.catch(rejection => rejection)));
-//export const promiseAll = (args: Array<any>): Promise<Array<any>> => Promise.all(args.map(arg => arg.catch(rejection => rejection)));
-
 export const promiseAll = (args: Array<any>): Promise<Array<any>> => Promise.all(args.map(arg => (async arg1 => arg1)(arg).catch(rejection => rejection)));
 export const promiseAllJson = (args: Array<any>): Promise<Array<any>> => Promise.all(args.map(arg => (async arg1 => arg1)(arg).catch(errorObject)));
 // TODO: use Promise.resolve(arg) instead of the async iffe
-
-promiseAll([null, undefined, true, 3, (async () => 4)(), Promise.resolve(5), Promise.reject(6)]).then(console.log).catch(console.error);
+//promiseAll([null, undefined, true, 3, (async () => 4)(), Promise.resolve(5), Promise.reject(6)]).then(console.log).catch(console.error);

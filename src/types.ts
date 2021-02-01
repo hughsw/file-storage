@@ -14,6 +14,7 @@ export const defaultHashConfig = ():HashConfig => ({
   //hashType: 'sha256',
   //hashType: 'sha512',
   //hashType: 'whirlpool',
+
   hashDigest: 'hex',
 
   casWidth: 2,
@@ -21,7 +22,6 @@ export const defaultHashConfig = ():HashConfig => ({
 });
 
 export interface StoragePayload {
-//  inStream: NodeJS.ReadableStream;
   uploadTag: string|void;
   timestamp: string;
   contentAddress?: string;

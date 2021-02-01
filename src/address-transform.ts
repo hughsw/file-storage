@@ -12,11 +12,8 @@ export class AddressTransform extends Transform {
   protected sizeBytes = 0;
   private uploadBytesPerSecond: number;
 
-  //  private hash = createHash(this.hashType);
   private readonly hash;
   private start = Date.now();
-
-  //  private randomError = false;
 
   private hashConfig = defaultHashConfig();
 
@@ -54,8 +51,6 @@ export class AddressTransform extends Transform {
     const msec = (Date.now() - this.start) || 1;
     const recipDurationSec = 1000 / msec;
     this.uploadBytesPerSecond = Math.floor(this.sizeBytes * recipDurationSec);
-    //const durationSec = (Date.now() - this.start + 1) / 1000;
-    //this.uploadBytesPerSecond = Math.floor(this.sizeBytes / durationSec);
   }
 
   _transform(chunk, encoding, callback) {
@@ -66,52 +61,35 @@ export class AddressTransform extends Transform {
       if (this.sizeBytes === 0) {
         this.start = Date.now();
       }
+
       this.sizeBytes += chunk.length;
       this.hash.update(chunk);
-      //console.log('AddressTransform _transform push');
       this.push(chunk);
       this.updateThroughput();
+
       randomThrow && randomThrow(0.005, 'AddressTransform._transform');
-      //	const err = randomError(0.005, 'AddressTransform._transform');
-      //	if (err) throw err;
     }
     catch (err) {
       error = err;
     }
     finally {
       //console.log('AddressTransform _transform callback');
-      //error = error || randomError(0.005, 'AddressTransform._transform');
-      /*
-        let sample;
-        if (this.randomError && !error && (sample = Math.random()) < 0.005) {
-	error = new Error(`transform error: ${sample}`);
-        }
-      */
       callback(error);
     }
   };
 
   _flush (callback) {
-    console.log('AddressTransform _flush');
+    //console.log('AddressTransform _flush');
     let error;
     try {
       this.contentAddress = this.hash.digest(this.hashConfig.hashDigest);
       this.updateThroughput();
       randomThrow && randomThrow(0.1, 'AddressTransform._flush');
-      //const err = randomError(0.1 'AddressTransform._flush');
-      //if (err) throw err;
     }
     catch (err) {
       error = err;
     }
     finally {
-      //	error = error || randomError(0.1 'AddressTransform._flush');
-      /*
-        let sample;
-        if (this.randomError && !error && (sample = Math.random()) < 0.1) {
-	error = new Error(`flush error: ${sample}`);
-        }
-      */
       callback(error);
     }
   };
