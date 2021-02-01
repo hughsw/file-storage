@@ -62,7 +62,7 @@ export class Storage {
 
     try {
       const tempName = timestamp + (uploadTag ? ('__' + uploadTag) : '');
-      const errName = randomError(0.05) ? 'no-such-dir' : undefined;
+      const errName = randomError && randomError(0.05) ? 'no-such-dir' : undefined;
       const filename = errName ? join(this.incomingDirname, errName, tempName) : join(this.incomingDirname, tempName);
 
       const addressWritable = new AddressWritable();
