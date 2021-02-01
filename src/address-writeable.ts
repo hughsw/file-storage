@@ -49,6 +49,7 @@ export class AddressWritable  {
     // with the stream.  So, we resolve immediately with an error condition.
 
     try {
+      console.log(`runPipeline: '${filename}' add inStream.on('error', rejectError)`);
       inStream.on('error', rejectError);
       //error => {
       //  reject(payload(error));

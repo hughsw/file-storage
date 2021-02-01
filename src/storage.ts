@@ -342,7 +342,7 @@ const safeCreateReadStream = (filename: string) => {
   const stream = createReadStream(filename);
   // if filename is a directory and an error handler is not installed, NodeJS will eventually crash with:
   //   Error: EISDIR: illegal operation on a directory, read
-  stream.on('error', error => console.log(`safeCreateReadStream on error: filename '${filename}' : ${error}`));
+  //stream.on('error', error => console.log(`safeCreateReadStream on error: filename '${filename}' : ${error}`));
   return stream;
 };
 
@@ -370,13 +370,19 @@ if (require.main === module) {
 
     const storage = new Storage(options);
 
-    const storeStream = filename => storage.storeStream({
-      //inStream: createReadStream(filename),
-      inStream: safeCreateReadStream(filename),
-      uploadTag: basename(filename),
-    });
+    const storeStream = filename => {
+      console.log('storeStream: safeCreateReadStream:', filename);
+      return storage.storeStream({
+        //inStream: createReadStream(filename),
+        inStream: safeCreateReadStream(filename),
+        uploadTag: basename(filename),
+      });
+    };
 
-    return promiseAllJson(args.map(storeStream));
+    console.log('promiseAllJson: start');
+    const ret = promiseAllJson(args.map(storeStream));
+    console.log('promiseAllJson: done');
+    return ret;
 
 //    const work = promiseAllJson(args.map(filename => storage.storeStream(createReadStream(filename), basename(filename))));
 
