@@ -192,6 +192,13 @@ const safeCreateReadStream = (filename: string) => {
   const stream = createReadStream(filename);
   // if filename is a directory and an error handler is not installed, NodeJS will eventually crash with:
   //   Error: EISDIR: illegal operation on a directory, read
+  //
+  // It's important to install an error handler immediately (even if it doesn't do anything)
+  // because if any exception occurs in the code path before the error handler is installed
+  // (e.g. in some constructor), then the current tick can end and an error from this read
+  // stream can crash Node JS...
+  //
+  stream.on('error', error => undefined);
   //stream.on('error', error => console.log(`safeCreateReadStream on error: filename '${filename}' : ${error}`));
   return stream;
 };

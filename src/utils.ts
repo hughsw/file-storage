@@ -138,12 +138,12 @@ export const errorObject = error => {
   }
 };
 
-//*
+/*
 export const randomError = undefined;
 export const randomThrow = undefined;
 //HSW*/
 
-/*
+//*
 export const randomError = (chance: number, tag: string = null) => {
   if (Math.random() < chance) return new Error(tag || `randomError at ${chance}`);
 };
